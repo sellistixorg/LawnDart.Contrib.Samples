@@ -1,0 +1,93 @@
+﻿@attribute [StreamRendering]
+@using System.Text.Json
+@inject IBasketContents Basket
+@inject NavigationManager Nav
+@inject IHttpContextAccessor Http
+@implements IDisposable
+
+@if (sessionEnded)
+{
+    <a href="/user/login">Sign in</a>
+}
+else if (TotalQuantity is int qty && qty > 0)
+{
+    <a class="cart-button" aria-label="@AriaLabel" href="cart">
+        <img class="cart-button-icon" role="presentation" src="icons/cart.svg" />
+        <span class="cart-button-count" @key="qty">@(qty > 99 ? "99+" : qty.ToString())</span>
+    </a>
+}
+else
+{
+    <a class="icon-button" aria-label="Shopping bag" href="cart">
+        <img role="presentation" src="icons/cart.svg" />
+    </a>
+}
+
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private IDisposable? basketStateSubscription;
+    private IReadOnlyCollection<BasketItem>? basketItems;
+    private bool sessionEnded;
+
+    private int? TotalQuantity => basketItems?.Sum(i => i.Quantity);
+
+    private string AriaLabel => $"Shopping bag, {TotalQuantity} item{(TotalQuantity == 1 ? "" : "s")}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The bag can change while this component is alive, including during this
+        // request. RefreshAsync runs on this component's dispatcher.
+        basketStateSubscription = Basket.NotifyOnChange(RefreshAsync);
+
+        await UpdateBasketItemsAsync();
+    }
+
+    private Task RefreshAsync() =>
+        InvokeAsync(async () =>
+        {
+            await UpdateBasketItemsAsync();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        basketStateSubscription?.Dispose();
+        _lifetime.Cancel();
+        _lifetime.Dispose();
+    }
+
+    private async Task UpdateBasketItemsAsync()
+    {
+        var cancellationToken = _lifetime.Token;
+        try
+        {
+            basketItems = await Basket.GetBasketItemsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (ShopperSessionEndedException)
+        {
+            sessionEnded = true;
+            ShopperPages.SendToLogin(Nav, Http.HttpContext);
+            return;
+        }
+        catch (HttpRequestException)
+        {
+            basketItems = [];
+        }
+        catch (NotSupportedException)
+        {
+            basketItems = [];
+        }
+        catch (JsonException)
+        {
+            basketItems = [];
+        }
+        catch (TaskCanceledException)
+        {
+            basketItems = [];
+        }
+    }
+}

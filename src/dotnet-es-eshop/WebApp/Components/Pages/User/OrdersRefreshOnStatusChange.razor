@@ -1,0 +1,52 @@
+﻿@implements IDisposable
+@inject OrderStatusNotificationService Notifications
+
+@code {
+    private IDisposable? _subscription;
+    private Guid _subscribedBuyer;
+
+    /// <summary>
+    /// Shopper account id. The sub claim. Empty skips the subscription.
+    /// </summary>
+    [Parameter]
+    public Guid BuyerId { get; set; }
+
+    /// <summary>
+    /// Order ids from this page's latest orders read.
+    /// </summary>
+    [Parameter]
+    public Guid[] OrderIds { get; set; } = [];
+
+    /// <summary>
+    /// Runs on the orders page when a status message arrives for this shopper or for one of <see cref="OrderIds"/>.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnStatusChanged { get; set; }
+
+    protected override void OnInitialized() => Subscribe(SynchronizationContext.Current);
+
+    public void Dispose() => _subscription?.Dispose();
+
+    private void Subscribe(SynchronizationContext? context)
+    {
+        if (BuyerId == Guid.Empty || BuyerId == _subscribedBuyer)
+            return;
+
+        _subscription?.Dispose();
+        _subscribedBuyer = BuyerId;
+        _subscription = Notifications.Subscribe(BuyerId, OnStatusChanged, context);
+        Notifications.RememberOrders(_subscription, OrderIds);
+    }
+
+    private void Remember()
+    {
+        if (_subscription is not null)
+            Notifications.RememberOrders(_subscription, OrderIds);
+    }
+
+    protected override void OnParametersSet()
+    {
+        Subscribe(SynchronizationContext.Current);
+        Remember();
+    }
+}

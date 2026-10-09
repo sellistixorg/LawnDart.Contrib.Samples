@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup>
+    <RootNamespace>LawnDart.Samples.EShop.OrderProcessor</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LawnDart" />
+    <PackageReference Include="LawnDart.AspNetCore" />
+    <PackageReference Include="LawnDart.EventSourcing" />
+    <PackageReference Include="LawnDart.EventSourcing.SqlServer" />
+    <PackageReference Include="LawnDart.Messaging" />
+    <PackageReference Include="LawnDart.Messaging.InMemory" />
+    <PackageReference Include="LawnDart.Messaging.SqlServer" />
+    <PackageReference Include="LawnDart.Projections.Lightweight" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceDefaults\LawnDart.Samples.EShop.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Shared\LawnDart.Samples.EShop.Shared.csproj" />
+    <ProjectReference Include="..\Infrastructure\LawnDart.Samples.EShop.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

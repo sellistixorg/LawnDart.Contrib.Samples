@@ -1,0 +1,42 @@
+﻿@page "/user/logout"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject ShopperSession Shopper
+@inject ShopperSignOutClient SignOutClient
+@inject NavigationManager Nav
+
+<form method="post" @formname="logout" @onsubmit="SignOutAsync" data-enhance="false">
+    <AntiforgeryToken />
+    <button class="button button-primary" type="submit">Log out</button>
+</form>
+
+@code {
+    private bool started;
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // A GET does not end the session. Sign-out runs only for the posted logout form.
+        if (HttpMethods.IsPost(HttpContext?.Request.Method ?? ""))
+            return;
+
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+
+    private async Task SignOutAsync()
+    {
+        if (started)
+            return;
+
+        started = true;
+        if (Shopper.AccountId is Guid accountId && HttpContext is not null)
+            await SignOutClient.SignOutAsync(accountId, HttpContext.RequestAborted);
+
+        if (HttpContext is not null)
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}

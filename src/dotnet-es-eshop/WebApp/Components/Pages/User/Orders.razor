@@ -1,0 +1,229 @@
+﻿@page "/user/orders"
+@using System.Security.Claims
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+@implements IDisposable
+@inject IShopperOrders OrderingService
+@inject ShopperSession Shopper
+@inject NavigationManager Nav
+@inject IHttpContextAccessor Http
+@inject AuthenticationStateProvider AuthenticationState
+@inject OrderListRefresh Refresh
+
+<PageTitle>Orders | AdventureWorks</PageTitle>
+<SectionContent SectionName="page-header-title">Orders</SectionContent>
+<OrdersRefreshOnStatusChange BuyerId="_buyerId" OrderIds="_orderIds" OnStatusChanged="ReloadFromStatusAsync" />
+
+@if (sessionEnded)
+{
+    <p><a href="/user/login">Sign in</a></p>
+}
+<div class="orders">
+@if (unavailable)
+{
+    <p class="orders-loading" role="status">Ordering is temporarily unavailable.</p>
+}
+else if (orders is null)
+{
+    <p class="orders-loading" role="status">Loading your orders...</p>
+}
+else if (orders.Length == 0)
+{
+    <div class="orders-empty">
+        <span class="orders-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 16h24l-2 22H14z" />
+                <path d="M18 16v-2a6 6 0 0 1 12 0v2" />
+            </svg>
+        </span>
+        <h2>No orders yet</h2>
+        <p>When you place an order, it shows up here with its status and total.</p>
+        <a class="button button-primary" href="/">Start shopping</a>
+    </div>
+}
+else
+{
+    <ul class="orders-list">
+        <li class="orders-header orders-item">
+            <div>Number</div>
+            <div>Date</div>
+            <div class="total-header">Total</div>
+            <div>Status</div>
+        </li>
+        @foreach (var order in orders)
+        {
+            <li class="orders-item">
+                <div class="order-number">
+                    @order.OrderNumber
+                </div>
+                <div class="order-date">
+                    @order.Date
+                </div>
+                <div class="order-total">
+                   $@order.Total.ToPriceDisplay()
+                </div>
+                <div class="order-status">
+                    <span class="status @order.Status.ToLower()">
+                        @order.Status
+                    </span>
+                </div>
+            </li>
+        }
+    </ul>
+}
+</div>
+
+@code {
+    private OrderRecord[]? orders;
+    private bool unavailable;
+    private bool sessionEnded;
+    private Guid _buyerId;
+    private Guid[] _orderIds = [];
+    private ClaimsPrincipal? _principal;
+    private readonly CancellationTokenSource _lifetime = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _principal = await ResolvePrincipalAsync();
+        _buyerId = ShopperSession.ReadAccountId(_principal) ?? Guid.Empty;
+        if (_buyerId == Guid.Empty)
+        {
+            if (!ShopperPages.RedirectIfSignedOut(Shopper, Nav))
+            {
+                sessionEnded = true;
+                ShopperPages.SendToLogin(Nav, Http.HttpContext);
+            }
+
+            return;
+        }
+
+        await TryLoadAsync(waitForPlaced: true);
+    }
+
+    public void Dispose()
+    {
+        _lifetime.Cancel();
+        _lifetime.Dispose();
+    }
+
+    private async Task ReloadFromStatusAsync()
+    {
+        if (ShopperSession.ReadAccountId(_principal) is null)
+        {
+            _principal = await ResolvePrincipalAsync();
+            _buyerId = ShopperSession.ReadAccountId(_principal) ?? Guid.Empty;
+        }
+
+        if (_buyerId == Guid.Empty)
+        {
+            sessionEnded = true;
+            ShopperPages.SendToLogin(Nav, Http.HttpContext);
+            return;
+        }
+
+        await TryLoadAsync(waitForPlaced: false);
+    }
+
+    private async Task<ClaimsPrincipal?> ResolvePrincipalAsync()
+    {
+        var httpUser = Http.HttpContext?.User;
+        if (ShopperSession.HasFreshAccessToken(httpUser))
+            return httpUser;
+
+        var state = await AuthenticationState.GetAuthenticationStateAsync();
+        return ShopperSession.HasFreshAccessToken(state.User) ? state.User : null;
+    }
+
+    private async Task TryLoadAsync(bool waitForPlaced)
+    {
+        var cancellationToken = _lifetime.Token;
+        try
+        {
+            using (ShopperCallPrincipal.Push(_principal))
+                orders = await ReadOrdersAsync(cancellationToken, waitForPlaced);
+
+            _orderIds = IdsOf(orders);
+            unavailable = false;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (ShopperSessionEndedException)
+        {
+            sessionEnded = true;
+            ShopperPages.SendToLogin(Nav, Http.HttpContext);
+        }
+        catch (HttpRequestException)
+        {
+            unavailable = true;
+        }
+        catch (NotSupportedException)
+        {
+            unavailable = true;
+        }
+        catch (JsonException)
+        {
+            unavailable = true;
+        }
+        // HttpClient reports a timeout as TaskCanceledException. That type extends
+        // OperationCanceledException, and the clause above rethrows only when this
+        // page's token is canceled. A timeout leaves that token alone, so it lands here.
+        catch (TaskCanceledException)
+        {
+            unavailable = true;
+        }
+    }
+
+    private async Task<OrderRecord[]> ReadOrdersAsync(CancellationToken cancellationToken, bool waitForPlaced)
+    {
+        var rows = await OrderingService.GetOrders(cancellationToken);
+        var placed = waitForPlaced ? PlacedOrderId() : null;
+        if (placed is null || Contains(rows, placed.Value))
+            return rows;
+
+        var attempts = Refresh.Attempts < 1 ? 1 : Refresh.Attempts;
+        for (var attempt = 1; attempt < attempts && !Contains(rows, placed.Value); attempt++)
+        {
+            await Task.Delay(Refresh.Delay, cancellationToken);
+            rows = await OrderingService.GetOrders(cancellationToken);
+        }
+
+        return rows;
+    }
+
+    private Guid? PlacedOrderId()
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("placed", out var values)
+            && Guid.TryParse(values.ToString(), out var id)
+            && id != Guid.Empty)
+        {
+            return id;
+        }
+
+        return null;
+    }
+
+    private static Guid[] IdsOf(OrderRecord[] rows)
+    {
+        var ids = new Guid[rows.Length];
+        for (var i = 0; i < rows.Length; i++)
+            ids[i] = rows[i].OrderNumber;
+        return ids;
+    }
+
+    private static bool Contains(OrderRecord[] rows, Guid orderId)
+    {
+        foreach (var row in rows)
+        {
+            if (row.OrderNumber == orderId)
+                return true;
+        }
+
+        return false;
+    }
+}

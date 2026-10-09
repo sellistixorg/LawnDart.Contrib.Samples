@@ -1,0 +1,29 @@
+﻿@inject ShopperSession Shopper
+@inject NavigationManager Nav
+
+@if (Shopper.IsSignedIn)
+{
+    <div class="user-menu">
+        <button type="button" class="icon-button" aria-label="Account" aria-haspopup="true">
+            <img role="presentation" src="icons/user.svg" />
+        </button>
+        <div class="user-menu-panel">
+            <p class="user-menu-name">@DisplayName</p>
+            <a class="user-menu-item" href="user/orders">My orders</a>
+            <form class="user-menu-item" method="post" action="user/logout" data-enhance="false">
+                <input type="hidden" name="_handler" value="logout" />
+                <AntiforgeryToken />
+                <button type="submit">Log out</button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <a class="icon-button" aria-label="Sign in" href="@ShopperReturnUrl.Login(Nav)"><img role="presentation" src="icons/user.svg" /></a>
+}
+
+@code {
+    private string DisplayName =>
+        string.IsNullOrWhiteSpace(Shopper.DisplayName) ? "Signed in" : Shopper.DisplayName;
+}

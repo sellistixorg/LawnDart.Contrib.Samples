@@ -1,0 +1,55 @@
+---
+description: User-voice rules for Contrib sample docs
+globs: docs/**/*.md,index.md,README.md,src/**/README.md
+alwaysApply: true
+---
+
+# Docs voice
+
+Applies to sample guides under `docs/`, root `README.md`, and `src/**/README.md`
+in this Contrib.Samples repository. These pages are not DocFX product docs.
+
+## Zinsser
+
+Strip every sentence. Cut words that do no work. Prefer short words and short
+sentences. One idea when you can. Active verbs. Concrete nouns. No throat-clearing
+and no decoration.
+
+## Punctuation
+
+No en dash (U+2013) and no em dash (U+2014). Use a period, comma, colon, or
+parentheses. ASCII hyphen-minus only in compounds (`user-facing`) and in code.
+
+## Lead and honesty
+
+Lead with what is true and what to do. Do not open a page or section with a
+negation. Contrast only when it adds information.
+
+Sample READMEs state only what the code does. Be honest about stores:
+**InMemory** and **SQL Server** only in this repo. Do not claim Redis, Postgres,
+Azure Service Bus, or Wolverine. Do not claim a store or transport this sample
+does not run.
+
+## Banned voice
+
+No ticket ids, plan-voice phrases, or "Historical. Do not rename."
+Do not invent competitor comparisons on sample pages.
+
+## What stays
+
+"Do not" is for a footgun the reader will hit. Operational limits stay when the
+next sentence is the action.
+
+## Samples and code
+
+Code in this sample is authority for what the sample does. Types and APIs come
+from published LawnDart packages. Confirm package behavior against
+sellistixorg/LawnDart at the package-matching tag when needed.
+
+```markdown
+<!-- BAD -->
+Do not look for those knobs. They do not exist.
+
+<!-- GOOD -->
+Snapshots are one row per stream. A write replaces that row.
+```

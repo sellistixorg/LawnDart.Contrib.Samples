@@ -1,0 +1,1515 @@
+{
+  "id": "dotnet-lawndart-eshop-basket",
+  "name": "dotnet LawnDart eShop Basket",
+  "description": "Basket bounded context for a LawnDart-style rewrite of Microsoft eShop Basket.API. Fine-grained add/change/remove commands (vs eShop UpdateBasket dump), basket contents view, clear basket, and Order Started → clear automation (checkout handoff). Place Order stays in Ordering.",
+  "tags": [
+    "eShop",
+    "LawnDart",
+    "Basket",
+    "dotnet"
+  ],
+  "projectName": "dotnet ES eShop",
+  "lastModified": 1791487980000,
+  "settings": {
+    "hoursPerPoint": 2,
+    "complexityMultiplier": 1.5,
+    "defaultWidgetComplexity": 1
+  },
+  "enumerations": [],
+  "ruleSets": [],
+  "widgets": [
+    {
+      "id": "role-shopper",
+      "type": "role",
+      "name": "Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-06T15:00:00Z",
+      "width": 120,
+      "height": 69,
+      "description": "Authenticated customer who maintains a shopping basket (same business role as Identity/Catalog Shopper).",
+      "tags": [
+        "Role",
+        "Shopper"
+      ],
+      "permissions": [
+        "basket.addItem",
+        "basket.changeQuantity",
+        "basket.removeItem",
+        "basket.view",
+        "basket.clear"
+      ],
+      "level": "User"
+    },
+    {
+      "id": "entity-customer-basket",
+      "type": "entity",
+      "name": "Customer Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 150,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "Shopper basket keyed by buyer/account id (eShop CustomerBasket in Redis). Stream key: basket:{buyerId}",
+      "tags": [
+        "AggregateRoot",
+        "Basket"
+      ],
+      "state": [
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Shopper account id owning the basket. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Items",
+          "type": "array",
+          "description": "Basket line items (product, qty, price snapshot)",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "LastUpdated",
+          "type": "date",
+          "description": "Last modification time",
+          "order": 3,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "cmd-add-item-to-basket",
+      "type": "command",
+      "name": "Add Item To Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-add-item-to-basket",
+      "description": "Adds a product line to the shopper basket with quantity and price snapshot.",
+      "tags": [
+        "Basket"
+      ],
+      "isAsync": false,
+      "handler": "BasketCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "basket.addItem"
+      ],
+      "aggregateRootId": "entity-customer-basket",
+      "events": [
+        "evt-basket-item-added"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ProductId",
+          "type": "guid",
+          "description": "Catalog item id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ProductName",
+          "type": "string",
+          "description": "Display name snapshot",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "UnitPrice",
+          "type": "decimal",
+          "description": "Unit price snapshot",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Quantity",
+          "type": "integer",
+          "description": "Units to add (>= 1)",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "PictureUrl",
+          "type": "string",
+          "description": "Picture URL snapshot taken at add time. When Catalog stores a PictureFileName this is /product-images/{productId}; empty picture uses the example image.",
+          "order": 7,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-basket-item-added",
+      "type": "event",
+      "name": "Basket Item Added",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-add-item-to-basket",
+      "description": "A line was added (or qty increased) on the shopper basket.",
+      "tags": [
+        "DomainEvent",
+        "Basket"
+      ],
+      "eventType": "Domain Event",
+      "source": "Basket Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When added",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ProductId",
+          "type": "guid",
+          "description": "Catalog item id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "ProductName",
+          "type": "string",
+          "description": "Display name snapshot",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "UnitPrice",
+          "type": "decimal",
+          "description": "Unit price snapshot",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "Quantity",
+          "type": "integer",
+          "description": "Quantity after add",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "PictureUrl",
+          "type": "string",
+          "description": "Picture URL snapshot",
+          "order": 8,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-add-to-basket",
+      "type": "screen",
+      "name": "Add To Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-add-item-to-basket",
+      "description": "Trigger from catalog item detail / listing (add to cart control). The listing and item pages render pictures through /product-images/{id}.",
+      "tags": [
+        "Trigger",
+        "Shopper"
+      ],
+      "route": "/catalog/items/:id",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-add-item-to-basket"
+      ]
+    },
+    {
+      "id": "gwt-add-item-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-add-item-to-basket",
+      "description": "When Add Item To Basket then Basket Item Added. The line keeps the add-time name, price and picture (snapshot).",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-add-item-to-basket",
+      "thenEvents": [
+        "evt-basket-item-added"
+      ]
+    },
+    {
+      "id": "error-basket-quantity-invalid-on-add",
+      "type": "error",
+      "name": "Basket Quantity Invalid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-add-item-to-basket",
+      "description": "Quantity must be at least 1 (eShop BasketItem validation). A summed quantity that overflows int is rejected with the same code.",
+      "tags": [],
+      "errorCode": "BASKET_QUANTITY_INVALID",
+      "severity": "medium"
+    },
+    {
+      "id": "cmd-change-basket-item-quantity",
+      "type": "command",
+      "name": "Change Basket Item Quantity",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "Sets quantity for a product already in the basket.",
+      "tags": [
+        "Basket"
+      ],
+      "isAsync": false,
+      "handler": "BasketCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "basket.changeQuantity"
+      ],
+      "aggregateRootId": "entity-customer-basket",
+      "events": [
+        "evt-basket-item-quantity-changed"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ProductId",
+          "type": "guid",
+          "description": "Catalog item id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Quantity",
+          "type": "integer",
+          "description": "New quantity (>= 1)",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-basket-item-quantity-changed",
+      "type": "event",
+      "name": "Basket Item Quantity Changed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "Basket line quantity was changed.",
+      "tags": [
+        "DomainEvent",
+        "Basket"
+      ],
+      "eventType": "Domain Event",
+      "source": "Basket Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When changed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ProductId",
+          "type": "guid",
+          "description": "Catalog item id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "OldQuantity",
+          "type": "integer",
+          "description": "Previous quantity",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "NewQuantity",
+          "type": "integer",
+          "description": "New quantity",
+          "order": 6,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-change-basket-quantity",
+      "type": "screen",
+      "name": "Change Quantity",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "Quantity stepper on basket page.",
+      "tags": [
+        "Trigger",
+        "Shopper"
+      ],
+      "route": "/cart",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-change-basket-item-quantity"
+      ]
+    },
+    {
+      "id": "error-invalid-basket-quantity",
+      "type": "error",
+      "name": "Basket Quantity Invalid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "Quantity must be at least 1 (eShop BasketItem validation).",
+      "tags": [],
+      "errorCode": "BASKET_QUANTITY_INVALID",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-change-qty-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "Given item in basket, when Change Basket Item Quantity with valid qty then Basket Item Quantity Changed. Name, unit price and picture stay at the add-time snapshot.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-basket-item-added"
+      ],
+      "whenCommandId": "cmd-change-basket-item-quantity",
+      "thenEvents": [
+        "evt-basket-item-quantity-changed"
+      ]
+    },
+    {
+      "id": "gwt-change-qty-invalid",
+      "type": "gwt",
+      "name": "Invalid quantity",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "Given item in basket, when Change Basket Item Quantity with qty < 1 then Basket Quantity Invalid.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-basket-item-added"
+      ],
+      "whenCommandId": "cmd-change-basket-item-quantity",
+      "thenEvents": [],
+      "thenErrorId": "error-invalid-basket-quantity"
+    },
+    {
+      "id": "error-basket-not-found-on-change-quantity",
+      "type": "error",
+      "name": "Basket Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "No basket exists for this buyer.",
+      "tags": [],
+      "errorCode": "BASKET_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "error-basket-item-not-found-on-change-quantity",
+      "type": "error",
+      "name": "Basket Item Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-change-basket-item-quantity",
+      "description": "The product is not on the basket.",
+      "tags": [],
+      "errorCode": "BASKET_ITEM_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "cmd-remove-item-from-basket",
+      "type": "command",
+      "name": "Remove Item From Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-item-from-basket",
+      "description": "Removes a product line from the shopper basket.",
+      "tags": [
+        "Basket"
+      ],
+      "isAsync": false,
+      "handler": "BasketCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "basket.removeItem"
+      ],
+      "aggregateRootId": "entity-customer-basket",
+      "events": [
+        "evt-basket-item-removed"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ProductId",
+          "type": "guid",
+          "description": "Catalog item id to remove",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-basket-item-removed",
+      "type": "event",
+      "name": "Basket Item Removed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-item-from-basket",
+      "description": "A product line was removed from the basket.",
+      "tags": [
+        "DomainEvent",
+        "Basket"
+      ],
+      "eventType": "Domain Event",
+      "source": "Basket Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When removed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ProductId",
+          "type": "guid",
+          "description": "Removed catalog item id",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-remove-basket-item",
+      "type": "screen",
+      "name": "Remove Basket Item",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-remove-item-from-basket",
+      "description": "Remove control on basket page.",
+      "tags": [
+        "Trigger",
+        "Shopper"
+      ],
+      "route": "/cart",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-remove-item-from-basket"
+      ]
+    },
+    {
+      "id": "gwt-remove-item-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-06T15:00:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-remove-item-from-basket",
+      "description": "Given item in basket, when Remove Item From Basket then Basket Item Removed.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-basket-item-added"
+      ],
+      "whenCommandId": "cmd-remove-item-from-basket",
+      "thenEvents": [
+        "evt-basket-item-removed"
+      ]
+    },
+    {
+      "id": "error-basket-not-found-on-remove",
+      "type": "error",
+      "name": "Basket Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-item-from-basket",
+      "description": "No basket exists for this buyer.",
+      "tags": [],
+      "errorCode": "BASKET_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "error-basket-item-not-found-on-remove",
+      "type": "error",
+      "name": "Basket Item Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-item-from-basket",
+      "description": "The product is not on the basket.",
+      "tags": [],
+      "errorCode": "BASKET_ITEM_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "view-basket-contents",
+      "type": "view",
+      "name": "Basket Contents",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-basket-contents",
+      "description": "Projection of basket lines, quantities, add-time price snapshots, and subtotal. No OldUnitPrice: Basket does not consume price changes.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-basket-item-added",
+        "evt-basket-item-quantity-changed",
+        "evt-basket-item-removed",
+        "evt-basket-cleared"
+      ],
+      "requiredPermissions": [
+        "basket.view"
+      ],
+      "state": [
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Items",
+          "type": "array",
+          "description": "Line items with product, qty, unit price, picture. The picture is the add-time snapshot: /product-images/{productId} when that was a file name, otherwise the example image.",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ItemCount",
+          "type": "integer",
+          "description": "Total units across lines",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Subtotal",
+          "type": "decimal",
+          "description": "Sum of unit price × qty",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "IsEmpty",
+          "type": "boolean",
+          "description": "Whether the basket has no lines",
+          "order": 5,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-basket-display",
+      "type": "screen",
+      "name": "Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-basket-contents",
+      "description": "Shopper basket page display. Each line's picture uses /product-images/{productId} when the add-time PictureUrl snapshot was a file name; empty picture uses the example image. WebApp GET /product-images/{id} forwards to Catalog GET /api/catalog/items/{id}/pic. Browse, search, the item page and the cart use /product-images/{id} when the stored picture is a file name; an empty picture shows the example image.",
+      "tags": [
+        "Display",
+        "Shopper"
+      ],
+      "route": "/cart",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-basket-contents"
+      ],
+      "events": []
+    },
+    {
+      "id": "cmd-clear-basket",
+      "type": "command",
+      "name": "Clear Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-clear-basket",
+      "description": "Deletes all lines for the shopper basket.",
+      "tags": [
+        "Basket"
+      ],
+      "isAsync": false,
+      "handler": "BasketCommandHandler",
+      "triggerSources": [
+        "User Action",
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "basket.clear"
+      ],
+      "aggregateRootId": "entity-customer-basket",
+      "events": [
+        "evt-basket-cleared"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Reason",
+          "type": "string",
+          "description": "UserCleared | OrderStarted | Other",
+          "order": 3,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-basket-cleared",
+      "type": "event",
+      "name": "Basket Cleared",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-clear-basket",
+      "description": "Shopper basket was emptied.",
+      "tags": [
+        "DomainEvent",
+        "Basket"
+      ],
+      "eventType": "Domain Event",
+      "source": "Basket Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When cleared",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Basket owner. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Reason",
+          "type": "string",
+          "description": "Why the basket was cleared",
+          "order": 4,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-clear-basket",
+      "type": "screen",
+      "name": "Clear Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-06T15:00:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-clear-basket",
+      "description": "Explicit clear control on basket page (order-started path uses automation, not this screen).",
+      "tags": [
+        "Trigger",
+        "Shopper"
+      ],
+      "route": "/basket",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-clear-basket"
+      ]
+    },
+    {
+      "id": "gwt-clear-basket-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-06T15:00:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-clear-basket",
+      "description": "Given item in basket, when Clear Basket then Basket Cleared.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-basket-item-added"
+      ],
+      "whenCommandId": "cmd-clear-basket",
+      "thenEvents": [
+        "evt-basket-cleared"
+      ]
+    },
+    {
+      "id": "error-basket-not-found-on-clear",
+      "type": "error",
+      "name": "Basket Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-clear-basket",
+      "description": "Fires when the shopper's basket has no events yet (no item was ever added). Checked after the buyer id is present. Message: \"Basket does not exist.\"",
+      "tags": [],
+      "errorCode": "BASKET_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-clear-basket-unknown",
+      "type": "gwt",
+      "name": "Unknown basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-clear-basket",
+      "description": "Given no basket, when Clear Basket then Basket Not Found.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-clear-basket",
+      "thenEvents": [],
+      "thenErrorId": "error-basket-not-found-on-clear"
+    },
+    {
+      "id": "proc-clear-basket-on-order-started",
+      "type": "process",
+      "name": "Route Order Started To Clear Basket",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-06T15:00:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-clear-basket-when-order-started",
+      "description": "Subscribes to Ordering Order Started; issues Clear Basket for that buyer.",
+      "tags": [
+        "Automation",
+        "ForwardRef",
+        "CheckoutHandoff"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Clear Basket",
+          "description": "Pass buyer/user id from Order Started; reason OrderStarted"
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-order-started"
+      ],
+      "issuesCommandId": "cmd-clear-basket"
+    },
+    {
+      "id": "evt-order-started",
+      "type": "event",
+      "name": "Order Started (from Ordering)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-ordering-signals-basket",
+      "description": "Local mirror of Ordering evt-order-started for Basket automation. Producer lives in Ordering Place Order slice.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Ordering"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "eventType": "Integration Event",
+      "source": "Ordering Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When signaled",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "User/buyer id whose basket to clear. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "proc-hold-slice-inbound-ordering-signals-basket",
+      "type": "process",
+      "name": "Hold Integration Mirrors",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-inbound-ordering-signals-basket",
+      "description": "Process trigger for the import-mirror holder slice. These events exist so automation subscribedEventIds resolve locally; they are not business emissions of Catalog/Basket/Payment/Ordering command slices.",
+      "tags": [
+        "Trigger",
+        "ImportFix"
+      ],
+      "stepItems": [
+        {
+          "name": "Resolve cross-workspace subscriptions",
+          "description": "Local mirror widgets only"
+        }
+      ]
+    }
+  ],
+  "swimlanes": [
+    {
+      "id": "slice-add-item-to-basket",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Add Item To Basket",
+      "description": "Shopper adds a catalog item line (or increases qty if already present). LawnDart intent command; eShop maps this into gRPC UpdateBasket replace-all document. Cross-workspace dependencies: Sign In Shopper (Identity workspace), View Catalog Item (Catalog workspace). The basket keeps add-time price snapshots. Adding a product already in the basket raises that line's quantity; its name, price and picture stay as first added. Basket does not consume Catalog Item Price Changed.",
+      "position": 200,
+      "width": 400,
+      "height": 520,
+      "order": 100,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "tags": [
+        "Basket",
+        "Shopper",
+        "CRUD-rewrite"
+      ],
+      "dependencies": [
+        "slice-sign-in-shopper",
+        "slice-view-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "boundedContext": "Basket",
+      "commands": [
+        "cmd-add-item-to-basket"
+      ],
+      "events": [
+        "evt-basket-item-added"
+      ],
+      "views": [],
+      "screens": [
+        "screen-add-to-basket"
+      ],
+      "entities": [
+        "entity-customer-basket"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-basket-quantity-invalid-on-add"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-add-item-happy"
+      ]
+    },
+    {
+      "id": "slice-change-basket-item-quantity",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Change Basket Item Quantity",
+      "description": "Shopper sets an explicit quantity on an existing basket line (part of eShop UpdateBasket dump).",
+      "position": 628,
+      "width": 400,
+      "height": 520,
+      "order": 200,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Basket",
+        "Shopper",
+        "CRUD-rewrite"
+      ],
+      "dependencies": [
+        "slice-add-item-to-basket"
+      ],
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Basket",
+      "commands": [
+        "cmd-change-basket-item-quantity"
+      ],
+      "events": [
+        "evt-basket-item-quantity-changed"
+      ],
+      "views": [],
+      "screens": [
+        "screen-change-basket-quantity"
+      ],
+      "entities": [
+        "entity-customer-basket"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-invalid-basket-quantity",
+        "error-basket-not-found-on-change-quantity",
+        "error-basket-item-not-found-on-change-quantity"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-change-qty-happy",
+        "gwt-change-qty-invalid"
+      ]
+    },
+    {
+      "id": "slice-remove-item-from-basket",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Remove Item From Basket",
+      "description": "Shopper removes a product line from the basket.",
+      "position": 1056,
+      "width": 400,
+      "height": 520,
+      "order": 300,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Basket",
+        "Shopper",
+        "CRUD-rewrite"
+      ],
+      "dependencies": [
+        "slice-add-item-to-basket"
+      ],
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Basket",
+      "commands": [
+        "cmd-remove-item-from-basket"
+      ],
+      "events": [
+        "evt-basket-item-removed"
+      ],
+      "views": [],
+      "screens": [
+        "screen-remove-basket-item"
+      ],
+      "entities": [
+        "entity-customer-basket"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-basket-not-found-on-remove",
+        "error-basket-item-not-found-on-remove"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-remove-item-happy"
+      ]
+    },
+    {
+      "id": "slice-basket-contents",
+      "type": "vertical",
+      "sliceKind": "state-view",
+      "name": "Basket Contents",
+      "description": "Shopper read model of current basket lines and totals (gRPC GetBasket / WebApp basket UI). Prices stay at the add-time snapshot. A quantity change keeps that unit price; Basket does not consume Catalog Item Price Changed.",
+      "position": 1484,
+      "width": 400,
+      "height": 520,
+      "order": 400,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Basket",
+        "Shopper",
+        "StateView"
+      ],
+      "dependencies": [
+        "slice-add-item-to-basket"
+      ],
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "boundedContext": "Basket",
+      "commands": [],
+      "events": [],
+      "views": [
+        "view-basket-contents"
+      ],
+      "screens": [
+        "screen-basket-display"
+      ],
+      "entities": [
+        "entity-customer-basket"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-clear-basket",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Clear Basket",
+      "description": "Empties the shopper basket (explicit clear or checkout handoff target). Maps to gRPC DeleteBasket. Also issued by Order Started automation.",
+      "position": 1912,
+      "width": 400,
+      "height": 520,
+      "order": 500,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Basket",
+        "Shopper",
+        "CheckoutHandoff"
+      ],
+      "dependencies": [
+        "slice-add-item-to-basket"
+      ],
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Basket",
+      "commands": [
+        "cmd-clear-basket"
+      ],
+      "events": [
+        "evt-basket-cleared"
+      ],
+      "views": [],
+      "screens": [
+        "screen-clear-basket"
+      ],
+      "entities": [
+        "entity-customer-basket"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-basket-not-found-on-clear"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-clear-basket-happy",
+        "gwt-clear-basket-unknown"
+      ]
+    },
+    {
+      "id": "slice-inbound-ordering-signals-basket",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Inbound Ordering Signals (mirrors)",
+      "description": "Import-only holder for Ordering evt-order-started so Clear Basket When Order Started can resolve subscribedEventIds without putting the mirror on Clear Basket's Events zone. Modeling scaffolding only, no code; real delivery is the producing context's integration event over the bus.",
+      "position": 2340,
+      "width": 400,
+      "height": 520,
+      "order": 550,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 2,
+      "tags": [
+        "IntegrationMirror",
+        "ImportFix",
+        "Inbound"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Basket",
+      "commands": [],
+      "events": [
+        "evt-order-started"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-hold-slice-inbound-ordering-signals-basket"
+      ],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-clear-basket-when-order-started",
+      "type": "vertical",
+      "sliceKind": "automation",
+      "name": "Clear Basket When Order Started",
+      "description": "Checkout handoff: when Ordering emits Order Started, issue Clear Basket. Maps to OrderStartedIntegrationEventHandler. Forward-ref event id for Ordering workspace.",
+      "position": 2768,
+      "width": 400,
+      "height": 420,
+      "order": 600,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Basket",
+        "Automation",
+        "CheckoutHandoff",
+        "ForwardRef"
+      ],
+      "dependencies": [
+        "slice-clear-basket"
+      ],
+      "dateCreated": "2026-10-06T15:00:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Basket",
+      "commands": [],
+      "events": [],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-clear-basket-on-order-started"
+      ],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    }
+  ],
+  "groups": [],
+  "connections": [],
+  "sequenceLayout": {
+    "mode": "structured",
+    "actorLanes": [],
+    "eventAssignments": {},
+    "eventSequence": [],
+    "options": {
+      "fixedLaneHeight": 120
+    }
+  }
+}

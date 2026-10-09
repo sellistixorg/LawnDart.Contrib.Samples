@@ -1,0 +1,134 @@
+@page "/catalog/search"
+@using System.Text.Json
+@implements IDisposable
+@inject SearchCatalogClient Search
+@inject IProductImageUrlProvider ProductImages
+
+<PageTitle>Search | AdventureWorks</PageTitle>
+<SectionContent SectionName="page-header-title">Search</SectionContent>
+<SectionContent SectionName="page-header-subtitle">Find a product by the start of its name.</SectionContent>
+
+<div class="search-page">
+    <form class="search-form" method="get" action="/catalog/search">
+        <label class="search-label" for="catalog-search-text">Name</label>
+        <input id="catalog-search-text" name="text" type="search" value="@Text" autocomplete="off" />
+        <button class="button button-primary" type="submit">Search</button>
+    </form>
+
+    @if (unavailable)
+    {
+        <p class="search-status" role="status">Catalog is temporarily unavailable.</p>
+    }
+    else if (result is null)
+    {
+        <p class="search-status" role="status">Searching.</p>
+    }
+    else if (string.IsNullOrEmpty(result.Query))
+    {
+        <p class="search-status">Type a product name.</p>
+    }
+    else if (result.TotalItems == 0)
+    {
+        <p class="search-status">No products start with that name.</p>
+    }
+    else
+    {
+        <p class="search-count">@result.TotalItems @(result.TotalItems == 1 ? "product" : "products")</p>
+        <ul class="search-results">
+            @foreach (var item in result.Items)
+            {
+                <li>
+                    <a class="search-result" href="@ItemUrl(item.ItemId)">
+                        <img alt="" src="@ProductImages.GetProductImageUrl(item.ItemId, item.PictureUrl)" />
+                        <span class="search-result-name">@item.Name</span>
+                        <span class="search-result-price">$@item.Price.ToPriceDisplay()</span>
+                    </a>
+                </li>
+            }
+        </ul>
+
+        @if (TotalPages > 1)
+        {
+            <nav class="search-pages" aria-label="Search pages">
+                @if (CurrentPage > 1)
+                {
+                    <a href="@PageUrl(CurrentPage - 1)" rel="prev">Prev</a>
+                }
+                <span>@CurrentPage / @TotalPages</span>
+                @if (CurrentPage < TotalPages)
+                {
+                    <a href="@PageUrl(CurrentPage + 1)" rel="next">Next</a>
+                }
+            </nav>
+        }
+    }
+</div>
+
+@code {
+    private const int PageSize = 10;
+
+    private int CurrentPage => Math.Max(1, Page.GetValueOrDefault(1));
+
+    private int TotalPages =>
+        result is null ? 0 : (int)Math.Ceiling(1.0 * result.TotalItems / PageSize);
+
+    private readonly CancellationTokenSource _lifetime = new();
+    private SearchCatalogView? result;
+    private bool unavailable;
+
+    [SupplyParameterFromQuery(Name = "text")]
+    public string? Text { get; set; }
+
+    [SupplyParameterFromQuery]
+    public int? Page { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        unavailable = false;
+        result = null;
+        var cancellationToken = _lifetime.Token;
+        var pageIndex = Page.GetValueOrDefault(1) - 1;
+        if (pageIndex < 0)
+            pageIndex = 0;
+
+        try
+        {
+            result = await Search.GetAsync(Text, pageIndex, PageSize, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            unavailable = true;
+        }
+        catch (NotSupportedException)
+        {
+            unavailable = true;
+        }
+        catch (JsonException)
+        {
+            unavailable = true;
+        }
+        catch (TaskCanceledException)
+        {
+            unavailable = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        _lifetime.Cancel();
+        _lifetime.Dispose();
+    }
+
+    private string ItemUrl(Guid itemId) => $"/item/{itemId:D}";
+
+    private string PageUrl(int page)
+    {
+        var text = Text ?? "";
+        var pageQuery = page <= 1 ? "" : $"&page={page}";
+        return $"/catalog/search?text={Uri.EscapeDataString(text)}{pageQuery}";
+    }
+}

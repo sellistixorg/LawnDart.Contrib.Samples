@@ -1,0 +1,3514 @@
+{
+  "id": "dotnet-lawndart-eshop-ordering",
+  "name": "dotnet LawnDart eShop Ordering",
+  "description": "Ordering bounded context for a LawnDart-style rewrite of Microsoft eShop Ordering. Place Order emits evt-order-started (Basket) and later evt-order-awaiting-validation / evt-order-paid (Catalog). Stock confirm/reject consume Catalog events; payment success is a forward-ref into Mark Order Paid. Payment capture itself stays in Payment workspace. Grace period: the OrderProcessor worker publishes Grace Period Confirmed and the Confirm Grace Period automation issues Mark Order Awaiting Validation.",
+  "tags": [
+    "eShop",
+    "LawnDart",
+    "Ordering",
+    "dotnet"
+  ],
+  "projectName": "dotnet ES eShop",
+  "lastModified": 1791479400000,
+  "settings": {
+    "hoursPerPoint": 2,
+    "complexityMultiplier": 1.5,
+    "defaultWidgetComplexity": 1
+  },
+  "enumerations": [],
+  "ruleSets": [],
+  "widgets": [
+    {
+      "id": "role-shopper",
+      "type": "role",
+      "name": "Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 120,
+      "height": 69,
+      "description": "Customer placing and viewing orders.",
+      "tags": [
+        "Role",
+        "Shopper"
+      ],
+      "permissions": [
+        "order.place",
+        "order.cancel",
+        "order.view"
+      ],
+      "level": "User"
+    },
+    {
+      "id": "role-store-operator",
+      "type": "role",
+      "name": "Store Operator",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 140,
+      "height": 69,
+      "description": "Backoffice operator who ships or cancels orders.",
+      "tags": [
+        "Role",
+        "Backoffice"
+      ],
+      "permissions": [
+        "order.ship",
+        "order.cancel",
+        "order.view"
+      ],
+      "level": "Staff"
+    },
+    {
+      "id": "entity-order",
+      "type": "entity",
+      "name": "Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 140,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "Customer order aggregate (eShop Ordering.Domain Order). Stream key: order:{orderId}",
+      "tags": [
+        "AggregateRoot",
+        "Ordering"
+      ],
+      "state": [
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Shopper account id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderStatus",
+          "type": "string",
+          "description": "Submitted|AwaitingValidation|StockConfirmed|Paid|Shipped|Cancelled",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderDate",
+          "type": "date",
+          "description": "When placed",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Ship-to street",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "Ship-to city",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "Ship-to state",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Ship-to country",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Ship-to postal code",
+          "order": 9,
+          "required": true
+        },
+        {
+          "name": "OrderItems",
+          "type": "array",
+          "description": "Product lines",
+          "order": 10,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Status description",
+          "order": 11,
+          "required": false
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Buyer user name (the buyer display name; code field OrderState.Name)",
+          "order": 12,
+          "required": true
+        },
+        {
+          "name": "PaymentMethodId",
+          "type": "guid",
+          "description": "Payment method id",
+          "order": 13,
+          "required": true
+        },
+        {
+          "name": "CardTypeId",
+          "type": "integer",
+          "description": "Card type id",
+          "order": 14,
+          "required": true
+        },
+        {
+          "name": "CardHolderName",
+          "type": "string",
+          "description": "Name on card",
+          "order": 15,
+          "required": true
+        },
+        {
+          "name": "MaskedCardNumber",
+          "type": "string",
+          "description": "Masked card number only. The last four digits.",
+          "order": 16,
+          "required": true
+        },
+        {
+          "name": "CardExpiration",
+          "type": "date",
+          "description": "Card expiration",
+          "order": 17,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "entity-buyer",
+      "type": "entity",
+      "name": "Buyer",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 120,
+      "height": 45,
+      "entityType": "Entity",
+      "isAggregateRoot": false,
+      "description": "Buyer profile linked to orders (eShop Buyer aggregate).",
+      "tags": [
+        "Entity",
+        "Ordering"
+      ],
+      "state": [
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "IdentityGuid",
+          "type": "guid",
+          "description": "Identity account id. Equals Identity AccountId (subject \"sub\" claim). Upstream keeps a separate int Buyer id and stores the subject here.",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Buyer display name",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "entity-payment-method",
+      "type": "entity",
+      "name": "Payment Method",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 140,
+      "height": 45,
+      "entityType": "Entity",
+      "isAggregateRoot": false,
+      "description": "Card payment method on Buyer (eShop PaymentMethod). Card numbers must never appear in events.",
+      "tags": [
+        "Entity",
+        "Ordering"
+      ],
+      "state": [
+        {
+          "name": "PaymentMethodId",
+          "type": "guid",
+          "description": "Payment method id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Owning buyer. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "CardTypeId",
+          "type": "integer",
+          "description": "Card type",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "CardHolderName",
+          "type": "string",
+          "description": "Name on card",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "MaskedCardNumber",
+          "type": "string",
+          "description": "Masked card number only",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Expiration",
+          "type": "date",
+          "description": "Card expiration",
+          "order": 6,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "cmd-place-order",
+      "type": "command",
+      "name": "Place Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Creates order from basket lines, shipping address, and payment method (card masked in logs/events).",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": false,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "order.place"
+      ],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-placed",
+        "evt-order-started"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command / request id (idempotency)",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "New order id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Shopper account id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Buyer user name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Ship-to street",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "Ship-to city",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "Ship-to state",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Ship-to country",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Ship-to postal code",
+          "order": 9,
+          "required": true
+        },
+        {
+          "name": "CardTypeId",
+          "type": "integer",
+          "description": "Card type id",
+          "order": 10,
+          "required": true
+        },
+        {
+          "name": "CardHolderName",
+          "type": "string",
+          "description": "Name on card",
+          "order": 11,
+          "required": true
+        },
+        {
+          "name": "MaskedCardNumber",
+          "type": "string",
+          "description": "Masked card number only",
+          "order": 12,
+          "required": true
+        },
+        {
+          "name": "CardExpiration",
+          "type": "date",
+          "description": "Card expiration",
+          "order": 13,
+          "required": true
+        },
+        {
+          "name": "OrderItems",
+          "type": "array",
+          "description": "Basket lines (product, name, price, units)",
+          "order": 14,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-placed",
+      "type": "event",
+      "name": "Order Placed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Order created in Submitted status with lines and ship-to address.",
+      "tags": [
+        "DomainEvent",
+        "Ordering"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When placed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "OrderStatus",
+          "type": "string",
+          "description": "Submitted",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "OrderItems",
+          "type": "array",
+          "description": "Order lines",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "Ship-to city",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Ship-to country",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Buyer user name",
+          "order": 9,
+          "required": true
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Ship-to street",
+          "order": 10,
+          "required": true
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "Ship-to state",
+          "order": 11,
+          "required": false
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Ship-to postal code",
+          "order": 12,
+          "required": true
+        },
+        {
+          "name": "CardTypeId",
+          "type": "integer",
+          "description": "Card type id",
+          "order": 13,
+          "required": true
+        },
+        {
+          "name": "CardHolderName",
+          "type": "string",
+          "description": "Name on card",
+          "order": 14,
+          "required": true
+        },
+        {
+          "name": "MaskedCardNumber",
+          "type": "string",
+          "description": "Masked card number only. The last four digits.",
+          "order": 15,
+          "required": true
+        },
+        {
+          "name": "CardExpiration",
+          "type": "date",
+          "description": "Card expiration",
+          "order": 16,
+          "required": true
+        },
+        {
+          "name": "PaymentMethodId",
+          "type": "guid",
+          "description": "Payment method id",
+          "order": 17,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-started",
+      "type": "event",
+      "name": "Order Started",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Integration signal that ordering started for a buyer. Basket clears on this id (evt-order-started). Distinct from Order Placed (business fact of the new order).",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Ordering",
+        "BasketHandoff"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When signaled",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "User/buyer id whose basket to clear. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-checkout",
+      "type": "screen",
+      "name": "Checkout",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-place-order",
+      "description": "Checkout screen (WebApp Checkout.razor).",
+      "tags": [
+        "Trigger",
+        "Shopper"
+      ],
+      "route": "/checkout",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-place-order"
+      ]
+    },
+    {
+      "id": "gwt-place-order-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-place-order",
+      "description": "When Place Order then Order Placed and Order Started.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-place-order",
+      "thenEvents": [
+        "evt-order-placed",
+        "evt-order-started"
+      ]
+    },
+    {
+      "id": "error-order-request-id-required-on-place-order",
+      "type": "error",
+      "name": "Order Request Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Request id is required (empty CommandId).",
+      "tags": [],
+      "errorCode": "ORDER_REQUEST_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-id-required-on-place-order",
+      "type": "error",
+      "name": "Order Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Order id is required.",
+      "tags": [],
+      "errorCode": "ORDER_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-request-id-mismatch",
+      "type": "error",
+      "name": "Order Request Id Mismatch",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Order id must match the request id.",
+      "tags": [],
+      "errorCode": "ORDER_REQUEST_ID_MISMATCH",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-buyer-id-required",
+      "type": "error",
+      "name": "Order Buyer Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Buyer id is required.",
+      "tags": [],
+      "errorCode": "ORDER_BUYER_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-user-name-required",
+      "type": "error",
+      "name": "Order User Name Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Buyer user name is required.",
+      "tags": [],
+      "errorCode": "ORDER_USER_NAME_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-address-required",
+      "type": "error",
+      "name": "Order Address Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Ship-to street, city, country, and postal code are required. State is optional.",
+      "tags": [],
+      "errorCode": "ORDER_ADDRESS_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-items-empty",
+      "type": "error",
+      "name": "Order Items Empty",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Order items are required.",
+      "tags": [],
+      "errorCode": "ORDER_ITEMS_EMPTY",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-item-product-required",
+      "type": "error",
+      "name": "Order Item Product Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Product id is required on every line.",
+      "tags": [],
+      "errorCode": "ORDER_ITEM_PRODUCT_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-item-name-required",
+      "type": "error",
+      "name": "Order Item Name Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Product name is required on every line.",
+      "tags": [],
+      "errorCode": "ORDER_ITEM_NAME_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-item-price-invalid",
+      "type": "error",
+      "name": "Order Item Price Invalid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Unit price cannot be negative.",
+      "tags": [],
+      "errorCode": "ORDER_ITEM_PRICE_INVALID",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-item-units-invalid",
+      "type": "error",
+      "name": "Order Item Units Invalid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Units must be at least 1.",
+      "tags": [],
+      "errorCode": "ORDER_ITEM_UNITS_INVALID",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-card-type-required",
+      "type": "error",
+      "name": "Order Card Type Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Card type id is required (below 1 is rejected).",
+      "tags": [],
+      "errorCode": "ORDER_CARD_TYPE_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-card-holder-required",
+      "type": "error",
+      "name": "Order Card Holder Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Name on card is required.",
+      "tags": [],
+      "errorCode": "ORDER_CARD_HOLDER_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-card-last-four-required",
+      "type": "error",
+      "name": "Order Card Last Four Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Last four digits of the card are required.",
+      "tags": [],
+      "errorCode": "ORDER_CARD_LAST_FOUR_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-card-number-rejected",
+      "type": "error",
+      "name": "Order Card Number Rejected",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Card number must be the last four digits. Anything else, such as a full card number, is rejected.",
+      "tags": [],
+      "errorCode": "ORDER_CARD_NUMBER_REJECTED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-card-expiration-required",
+      "type": "error",
+      "name": "Order Card Expiration Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-place-order",
+      "description": "Card expiration is required.",
+      "tags": [],
+      "errorCode": "ORDER_CARD_EXPIRATION_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "view-order-summary",
+      "type": "view",
+      "name": "Order Summary",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-order-summary",
+      "description": "Order detail projection for shopper and operator.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-order-placed",
+        "evt-order-awaiting-validation",
+        "evt-order-status-stock-confirmed",
+        "evt-order-cancelled",
+        "evt-order-paid",
+        "evt-order-shipped",
+        "evt-order-cancelled-for-stock"
+      ],
+      "requiredPermissions": [
+        "order.view"
+      ],
+      "state": [
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderStatus",
+          "type": "string",
+          "description": "Current status",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderDate",
+          "type": "date",
+          "description": "Placed at",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "OrderItems",
+          "type": "array",
+          "description": "Lines",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "ShipTo",
+          "type": "object",
+          "description": "Address fields",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Status text",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "Total",
+          "type": "decimal",
+          "description": "Order total",
+          "order": 8,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-order-detail-display",
+      "type": "screen",
+      "name": "Order Detail",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-order-summary",
+      "description": "Order detail display.",
+      "tags": [
+        "Display"
+      ],
+      "route": "/orders/:id",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-order-summary"
+      ],
+      "events": []
+    },
+    {
+      "id": "proc-confirm-grace-period",
+      "type": "process",
+      "name": "Route Grace Period To Awaiting Validation",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-confirm-grace-period",
+      "description": "Ordering API's ConfirmGracePeriodReactor subscribes to Grace Period Confirmed and issues Mark Order Awaiting Validation for that order id. An empty order id is logged and skipped. The timer runs in the OrderProcessor worker: it records Order Started and publishes Grace Period Confirmed once GracePeriodTime has elapsed.",
+      "tags": [
+        "Automation",
+        "Scheduled"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive Grace Period Confirmed",
+          "description": "From OrderProcessor (grace-period-confirmed)"
+        },
+        {
+          "name": "Issue Mark Order Awaiting Validation",
+          "description": "Pass order id; skip an empty order id"
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-grace-period-confirmed"
+      ],
+      "issuesCommandId": "cmd-mark-order-awaiting-validation"
+    },
+    {
+      "id": "proc-on-grace-period-elapsed",
+      "type": "process",
+      "name": "On Grace Period Elapsed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Process trigger: Confirm Grace Period issues this command when Grace Period Confirmed arrives from the OrderProcessor worker.",
+      "tags": [
+        "Trigger",
+        "Scheduled"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive Grace Period Confirmed",
+          "description": "Via Confirm Grace Period (automation 300)"
+        }
+      ]
+    },
+    {
+      "id": "cmd-mark-order-awaiting-validation",
+      "type": "command",
+      "name": "Mark Order Awaiting Validation",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Sets order status to AwaitingValidation and notifies Catalog. Issued by Confirm Grace Period on Grace Period Confirmed. Only a Submitted order moves; any other status writes no event.",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": true,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-awaiting-validation"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order to advance",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-awaiting-validation",
+      "type": "event",
+      "name": "Order Awaiting Validation",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Order awaiting stock validation. Catalog automation subscribes to this id.",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Ordering",
+        "CatalogHandoff"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When marked",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderStockItems",
+          "type": "array",
+          "description": "Product id + units to validate",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "gwt-awaiting-validation-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Given Order Placed, when Mark Order Awaiting Validation (issued on Grace Period Confirmed) then Order Awaiting Validation.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-order-placed"
+      ],
+      "whenCommandId": "cmd-mark-order-awaiting-validation",
+      "thenEvents": [
+        "evt-order-awaiting-validation"
+      ]
+    },
+    {
+      "id": "error-order-not-found-on-awaiting-validation",
+      "type": "error",
+      "name": "Order Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Order was not found.",
+      "tags": [],
+      "errorCode": "ORDER_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-id-required-on-awaiting-validation",
+      "type": "error",
+      "name": "Order Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Order id is required.",
+      "tags": [],
+      "errorCode": "ORDER_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-request-id-required-on-awaiting-validation",
+      "type": "error",
+      "name": "Order Request Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-awaiting-validation",
+      "description": "Request id is required (empty CommandId).",
+      "tags": [],
+      "errorCode": "ORDER_REQUEST_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "proc-route-catalog-stock-confirmed",
+      "type": "process",
+      "name": "Route Catalog Stock Confirmed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-when-catalog-stock-confirmed",
+      "description": "Subscribes to Catalog-owned evt-order-stock-confirmed.",
+      "tags": [
+        "Automation"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Mark Order Stock Confirmed",
+          "description": ""
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-order-stock-confirmed"
+      ],
+      "issuesCommandId": "cmd-mark-order-stock-confirmed"
+    },
+    {
+      "id": "proc-on-catalog-stock-confirmed",
+      "type": "process",
+      "name": "On Catalog Stock Confirmed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Process trigger from Catalog evt-order-stock-confirmed (via automation).",
+      "tags": [
+        "Trigger"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive catalog stock confirmed",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "cmd-mark-order-stock-confirmed",
+      "type": "command",
+      "name": "Mark Order Stock Confirmed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Sets order status to StockConfirmed.",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": true,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-status-stock-confirmed"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-status-stock-confirmed",
+      "type": "event",
+      "name": "Order Status Stock Confirmed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T17:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Order reached StockConfirmed. Payment should charge (PaymentProcessor listens to this class of event).",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Ordering",
+        "PaymentHandoff"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When confirmed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim). The original eShop carries the buyer id but no total; the total is added so Payment knows the amount.",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "OrderTotal",
+          "type": "decimal",
+          "description": "Amount to charge. The original eShop carries the buyer id but no total; the total is added so Payment knows the amount.",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "BuyerName",
+          "type": "string",
+          "description": "Buyer display name (the user name stored on the order)",
+          "order": 6,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-stock-confirmed-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Given awaiting validation, when Mark Order Stock Confirmed then Order Status Stock Confirmed.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-order-awaiting-validation"
+      ],
+      "whenCommandId": "cmd-mark-order-stock-confirmed",
+      "thenEvents": [
+        "evt-order-status-stock-confirmed"
+      ]
+    },
+    {
+      "id": "error-order-not-found-on-stock-confirmed",
+      "type": "error",
+      "name": "Order Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Order was not found.",
+      "tags": [],
+      "errorCode": "ORDER_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-id-required-on-stock-confirmed",
+      "type": "error",
+      "name": "Order Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Order id is required.",
+      "tags": [],
+      "errorCode": "ORDER_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-request-id-required-on-stock-confirmed",
+      "type": "error",
+      "name": "Order Request Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-stock-confirmed",
+      "description": "Request id is required (empty CommandId).",
+      "tags": [],
+      "errorCode": "ORDER_REQUEST_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "proc-route-catalog-stock-rejected",
+      "type": "process",
+      "name": "Route Catalog Stock Rejected",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-when-catalog-stock-rejected",
+      "description": "Subscribes to Catalog-owned evt-order-stock-rejected.",
+      "tags": [
+        "Automation"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Cancel Order For Insufficient Stock",
+          "description": ""
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-order-stock-rejected"
+      ],
+      "issuesCommandId": "cmd-cancel-order-for-stock"
+    },
+    {
+      "id": "proc-on-catalog-stock-rejected",
+      "type": "process",
+      "name": "On Catalog Stock Rejected",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Process trigger from Catalog stock rejected.",
+      "tags": [
+        "Trigger"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive catalog stock rejected",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "cmd-cancel-order-for-stock",
+      "type": "command",
+      "name": "Cancel Order For Insufficient Stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Cancels order because stock validation failed.",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": true,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-cancelled-for-stock"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "RejectedProductIds",
+          "type": "array",
+          "description": "Products lacking stock",
+          "order": 3,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-order-cancelled-for-stock",
+      "type": "event",
+      "name": "Order Cancelled For Stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Order cancelled due to insufficient stock.",
+      "tags": [
+        "DomainEvent",
+        "Ordering",
+        "Stock"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When cancelled",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "RejectedProductIds",
+          "type": "array",
+          "description": "Products lacking stock",
+          "order": 4,
+          "required": false
+        },
+        {
+          "name": "OrderStatus",
+          "type": "string",
+          "description": "Cancelled",
+          "order": 5,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-cancel-for-stock-happy",
+      "type": "gwt",
+      "name": "Stock rejected",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Given awaiting validation, when Cancel Order For Insufficient Stock then Order Cancelled For Stock.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-order-awaiting-validation"
+      ],
+      "whenCommandId": "cmd-cancel-order-for-stock",
+      "thenEvents": [
+        "evt-order-cancelled-for-stock"
+      ]
+    },
+    {
+      "id": "error-order-not-found-on-cancel-for-stock",
+      "type": "error",
+      "name": "Order Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Order was not found.",
+      "tags": [],
+      "errorCode": "ORDER_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-id-required-on-cancel-for-stock",
+      "type": "error",
+      "name": "Order Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Order id is required.",
+      "tags": [],
+      "errorCode": "ORDER_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-request-id-required-on-cancel-for-stock",
+      "type": "error",
+      "name": "Order Request Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order-for-stock",
+      "description": "Request id is required (empty CommandId).",
+      "tags": [],
+      "errorCode": "ORDER_REQUEST_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "proc-route-payment-succeeded",
+      "type": "process",
+      "name": "Route Payment Succeeded",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-when-payment-succeeded",
+      "description": "Subscribes to Payment-owned evt-payment-succeeded (forward-ref).",
+      "tags": [
+        "Automation",
+        "ForwardRef"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Mark Order Paid",
+          "description": ""
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-payment-succeeded"
+      ],
+      "issuesCommandId": "cmd-mark-order-paid"
+    },
+    {
+      "id": "proc-on-payment-succeeded",
+      "type": "process",
+      "name": "On Payment Succeeded",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-paid",
+      "description": "Process trigger from Payment succeeded (via automation).",
+      "tags": [
+        "Trigger"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive payment succeeded",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "cmd-mark-order-paid",
+      "type": "command",
+      "name": "Mark Order Paid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-paid",
+      "description": "Sets order status to Paid and signals Catalog to deduct stock.",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": true,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-paid"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-paid",
+      "type": "event",
+      "name": "Order Paid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-mark-order-paid",
+      "description": "Order paid. Catalog deduct automation subscribes to evt-order-paid.",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Ordering",
+        "CatalogHandoff"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When paid",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderStockItems",
+          "type": "array",
+          "description": "Product id + units to deduct",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "gwt-mark-paid-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-mark-order-paid",
+      "description": "Given stock confirmed, when Mark Order Paid then Order Paid.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-order-status-stock-confirmed"
+      ],
+      "whenCommandId": "cmd-mark-order-paid",
+      "thenEvents": [
+        "evt-order-paid"
+      ]
+    },
+    {
+      "id": "cmd-cancel-order",
+      "type": "command",
+      "name": "Cancel Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T02:47:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order",
+      "description": "Cancels an order that is not yet Paid or Shipped.",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": false,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "User Action",
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "order.cancel"
+      ],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-cancelled"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command / request id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order to cancel",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Reason",
+          "type": "string",
+          "description": "Optional cancel reason",
+          "order": 3,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-order-cancelled",
+      "type": "event",
+      "name": "Order Cancelled",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order",
+      "description": "Order cancelled by shopper or operator.",
+      "tags": [
+        "DomainEvent",
+        "Ordering"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When cancelled",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderStatus",
+          "type": "string",
+          "description": "Cancelled",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Reason",
+          "type": "string",
+          "description": "Cancel reason",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-cancel-order",
+      "type": "screen",
+      "name": "Cancel Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-cancel-order",
+      "description": "Cancel control on order detail.",
+      "tags": [
+        "Trigger"
+      ],
+      "route": "/orders/:id",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-cancel-order"
+      ]
+    },
+    {
+      "id": "error-cannot-cancel-order",
+      "type": "error",
+      "name": "Cannot Cancel Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-cancel-order",
+      "description": "Order is Paid or Shipped and cannot be cancelled.",
+      "tags": [],
+      "errorCode": "CANNOT_CANCEL_ORDER",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-cancel-order-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-cancel-order",
+      "description": "Given Order Placed (Submitted), when Cancel Order then Order Cancelled.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-order-placed"
+      ],
+      "whenCommandId": "cmd-cancel-order",
+      "thenEvents": [
+        "evt-order-cancelled"
+      ]
+    },
+    {
+      "id": "gwt-cancel-order-illegal",
+      "type": "gwt",
+      "name": "Already paid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-cancel-order",
+      "description": "Given Order Paid, when Cancel Order then Cannot Cancel Order.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-order-paid"
+      ],
+      "whenCommandId": "cmd-cancel-order",
+      "thenEvents": [],
+      "thenErrorId": "error-cannot-cancel-order"
+    },
+    {
+      "id": "cmd-ship-order",
+      "type": "command",
+      "name": "Ship Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T02:46:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-ship-order",
+      "description": "Marks a paid order as shipped.",
+      "tags": [
+        "Ordering"
+      ],
+      "isAsync": false,
+      "handler": "OrderingCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "order.ship"
+      ],
+      "aggregateRootId": "entity-order",
+      "events": [
+        "evt-order-shipped"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command / request id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order to ship",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-shipped",
+      "type": "event",
+      "name": "Order Shipped",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-ship-order",
+      "description": "Order was shipped.",
+      "tags": [
+        "DomainEvent",
+        "Ordering"
+      ],
+      "eventType": "Domain Event",
+      "source": "Ordering Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When shipped",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderStatus",
+          "type": "string",
+          "description": "Shipped",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "The order was shipped.",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "error-cannot-ship-order",
+      "type": "error",
+      "name": "Cannot Ship Order",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-ship-order",
+      "description": "Order is not in Paid status.",
+      "tags": [],
+      "errorCode": "CANNOT_SHIP_ORDER",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-ship-order-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-ship-order",
+      "description": "Given Order Paid, when Ship Order then Order Shipped.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-order-paid"
+      ],
+      "whenCommandId": "cmd-ship-order",
+      "thenEvents": [
+        "evt-order-shipped"
+      ]
+    },
+    {
+      "id": "gwt-ship-order-illegal",
+      "type": "gwt",
+      "name": "Not paid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-ship-order",
+      "description": "Given Order Placed only, when Ship Order then Cannot Ship Order.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-order-placed"
+      ],
+      "whenCommandId": "cmd-ship-order",
+      "thenEvents": [],
+      "thenErrorId": "error-cannot-ship-order"
+    },
+    {
+      "id": "view-orders-by-shopper",
+      "type": "view",
+      "name": "Orders By Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-orders-by-shopper",
+      "description": "List of order summaries for the signed-in shopper.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-order-placed",
+        "evt-order-awaiting-validation",
+        "evt-order-status-stock-confirmed",
+        "evt-order-paid",
+        "evt-order-shipped",
+        "evt-order-cancelled",
+        "evt-order-cancelled-for-stock"
+      ],
+      "requiredPermissions": [
+        "order.view"
+      ],
+      "state": [
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Shopper id. BuyerId = Identity AccountId (the signed-in shopper's subject \"sub\" claim).",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Orders",
+          "type": "array",
+          "description": "Order summary rows (id, date, status, total)",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-orders-list-display",
+      "type": "screen",
+      "name": "My Orders",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-orders-by-shopper",
+      "description": "Orders list page.",
+      "tags": [
+        "Display",
+        "Shopper"
+      ],
+      "route": "/orders",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-orders-by-shopper"
+      ],
+      "events": []
+    },
+    {
+      "id": "evt-order-stock-confirmed",
+      "type": "event",
+      "name": "Order Stock Confirmed (from Catalog)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-foreign-signals-ordering",
+      "description": "Local mirror of Catalog evt-order-stock-confirmed. Producer lives in Catalog Validate Order Stock.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Catalog"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "eventType": "Integration Event",
+      "source": "Catalog Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When signaled",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Related order id",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-stock-rejected",
+      "type": "event",
+      "name": "Order Stock Rejected (from Catalog)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-foreign-signals-ordering",
+      "description": "Local mirror of Catalog evt-order-stock-rejected. Producer lives in Catalog Validate Order Stock.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Catalog"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "eventType": "Integration Event",
+      "source": "Catalog Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When rejected",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ConfirmedOrderStockItems",
+          "type": "array",
+          "description": "Per-line hasStock flags",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-payment-succeeded",
+      "type": "event",
+      "name": "Payment Succeeded (from Payment)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-foreign-signals-ordering",
+      "description": "Local mirror of Payment evt-payment-succeeded. Producer lives in Payment Record Payment Succeeded.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Payment"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "eventType": "Integration Event",
+      "source": "Payment Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When succeeded",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "GatewayReference",
+          "type": "string",
+          "description": "Gateway reference",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Charged amount",
+          "order": 6,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "proc-hold-slice-inbound-foreign-signals-ordering",
+      "type": "process",
+      "name": "Hold Integration Mirrors",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-inbound-foreign-signals-ordering",
+      "description": "Process trigger for the import-mirror holder slice. These events exist so automation subscribedEventIds resolve locally; they are not business emissions of Catalog/Basket/Payment/Ordering command slices.",
+      "tags": [
+        "Trigger",
+        "ImportFix"
+      ],
+      "stepItems": [
+        {
+          "name": "Resolve cross-workspace subscriptions",
+          "description": "Local mirror widgets only"
+        }
+      ]
+    },
+    {
+      "id": "evt-payment-failed",
+      "type": "event",
+      "name": "Payment Failed (from Payment)",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-inbound-foreign-signals-ordering",
+      "description": "Local mirror of Payment evt-payment-failed for When Payment Failed → Cancel Order.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Payment"
+      ],
+      "eventType": "Integration Event",
+      "source": "Payment Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When failed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "FailureReason",
+          "type": "string",
+          "description": "Failure detail",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-grace-period-confirmed",
+      "type": "event",
+      "name": "Grace Period Confirmed (from OrderProcessor)",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:21:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-inbound-foreign-signals-ordering",
+      "description": "Published by the OrderProcessor worker when a submitted order's grace period has elapsed (token grace-period-confirmed; message id is a version 5 id derived from the order id). OrderProcessor's TrackSubmittedOrderReactor records each Order Started; GracePeriodManagerService checks every CheckUpdateTime (default 30 s) and publishes once GracePeriodTime (default 1 minute) has passed. OrderProcessor has no workspace of its own, so the event is held here. eShop name: GracePeriodConfirmedIntegrationEvent.",
+      "tags": [
+        "IntegrationEvent",
+        "Inbound",
+        "OrderProcessor",
+        "Scheduled"
+      ],
+      "eventType": "Integration Event",
+      "source": "OrderProcessor (grace-period timer)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier. Stable for one order id, so a republish is the same message.",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When the grace period was confirmed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id passed to Mark Order Awaiting Validation",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "proc-route-payment-failed",
+      "type": "process",
+      "name": "Route Payment Failed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-when-payment-failed",
+      "description": "Subscribes to Payment-owned evt-payment-failed (local mirror on holder slice).",
+      "tags": [
+        "Automation"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Cancel Order",
+          "description": "Pass order id; reason PaymentFailed"
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-payment-failed"
+      ],
+      "issuesCommandId": "cmd-cancel-order"
+    }
+  ],
+  "swimlanes": [
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [
+        "screen-checkout"
+      ],
+      "processes": [],
+      "questions": [],
+      "errors": [
+        "error-order-request-id-required-on-place-order",
+        "error-order-id-required-on-place-order",
+        "error-order-request-id-mismatch",
+        "error-order-buyer-id-required",
+        "error-order-user-name-required",
+        "error-order-address-required",
+        "error-order-items-empty",
+        "error-order-item-product-required",
+        "error-order-item-name-required",
+        "error-order-item-price-invalid",
+        "error-order-item-units-invalid",
+        "error-order-card-type-required",
+        "error-order-card-holder-required",
+        "error-order-card-last-four-required",
+        "error-order-card-number-rejected",
+        "error-order-card-expiration-required"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-place-order-happy"
+      ],
+      "commands": [
+        "cmd-place-order"
+      ],
+      "events": [
+        "evt-order-placed",
+        "evt-order-started"
+      ],
+      "entities": [
+        "entity-order",
+        "entity-buyer",
+        "entity-payment-method"
+      ],
+      "roles": [
+        "role-shopper"
+      ],
+      "dependencies": [
+        "slice-basket-contents",
+        "slice-shopper-account-profile"
+      ],
+      "tags": [
+        "Ordering",
+        "Shopper",
+        "Checkout"
+      ],
+      "complexityScore": 3,
+      "effortEstimate": 12,
+      "id": "slice-place-order",
+      "sliceKind": "state-change",
+      "name": "Place Order",
+      "description": "Checkout: shopper submits basket as an order (Submitted). Emits Order Placed and Order Started (basket-clear signal for Basket automation). Cross-workspace dependencies: Basket Contents (Basket workspace), Shopper Account Profile (Identity workspace). Order lines use the basket's add-time price snapshot. The order keeps a masked card snapshot (card type, holder, expiry, last four digits); the Identity profile has no card fields.",
+      "order": 100,
+      "position": 200,
+      "actorRoleId": "role-shopper"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "boundedContext": "Ordering",
+      "views": [
+        "view-order-summary"
+      ],
+      "screens": [
+        "screen-order-detail-display"
+      ],
+      "processes": [],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-shopper"
+      ],
+      "dependencies": [
+        "slice-place-order"
+      ],
+      "tags": [
+        "Ordering",
+        "Shopper",
+        "StateView"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "id": "slice-order-summary",
+      "sliceKind": "state-view",
+      "name": "Order Summary",
+      "description": "Shopper read model for a single order detail as status progresses.",
+      "order": 200,
+      "position": 628,
+      "actorRoleId": "role-shopper"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-confirm-grace-period"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-awaiting-validation"
+      ],
+      "tags": [
+        "Ordering",
+        "Automation",
+        "Scheduled"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-confirm-grace-period",
+      "sliceKind": "automation",
+      "name": "Confirm Grace Period",
+      "description": "When the grace period after Order Started elapses, Ordering issues Mark Order Awaiting Validation. Built with an explicit Grace Period Confirmed signal. The OrderProcessor worker records Order Started (TrackSubmittedOrderReactor), checks every CheckUpdateTime (default 30 s), and publishes Grace Period Confirmed once GracePeriodTime (default 1 minute) has passed (GracePeriodManagerService). This automation (ConfirmGracePeriodReactor in Ordering API) subscribes to Grace Period Confirmed and issues Mark Order Awaiting Validation. Grace Period Confirmed is held on the Inbound Catalog/Payment Signals (mirrors) slice because OrderProcessor has no workspace.",
+      "order": 300,
+      "position": 1056,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-on-grace-period-elapsed"
+      ],
+      "questions": [],
+      "errors": [
+        "error-order-not-found-on-awaiting-validation",
+        "error-order-id-required-on-awaiting-validation",
+        "error-order-request-id-required-on-awaiting-validation"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-awaiting-validation-happy"
+      ],
+      "commands": [
+        "cmd-mark-order-awaiting-validation"
+      ],
+      "events": [
+        "evt-order-awaiting-validation"
+      ],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-place-order"
+      ],
+      "tags": [
+        "Ordering",
+        "Stock"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-mark-order-awaiting-validation",
+      "sliceKind": "state-change",
+      "name": "Mark Order Awaiting Validation",
+      "description": "Moves Submitted → AwaitingValidation after the grace period. Emits evt-order-awaiting-validation for Catalog stock check. Owned by Ordering API; issued by the Confirm Grace Period automation when the OrderProcessor worker publishes Grace Period Confirmed. Only a Submitted order moves; any other status, including a repeat confirmation, writes no event.",
+      "order": 400,
+      "position": 1484,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "id": "slice-inbound-foreign-signals-ordering",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Inbound Catalog/Payment Signals (mirrors)",
+      "description": "Import-only holder for Catalog/Payment event mirrors so Ordering automations resolve subscribedEventIds without listing them on Mark Stock Confirmed / Cancel For Stock / Mark Paid Events zones. Modeling scaffolding only, no code; real delivery is the producing context's integration event over the bus. Also holds Grace Period Confirmed, published by the OrderProcessor worker (no workspace of its own), so Confirm Grace Period can subscribe to it.",
+      "position": 1912,
+      "width": 400,
+      "height": 520,
+      "order": 470,
+      "actorRoleId": "role-store-operator",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 2,
+      "tags": [
+        "IntegrationMirror",
+        "ImportFix",
+        "Inbound"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Ordering",
+      "commands": [],
+      "events": [
+        "evt-order-stock-confirmed",
+        "evt-order-stock-rejected",
+        "evt-payment-succeeded",
+        "evt-payment-failed",
+        "evt-grace-period-confirmed"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-hold-slice-inbound-foreign-signals-ordering"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-route-catalog-stock-confirmed"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-stock-confirmed"
+      ],
+      "tags": [
+        "Ordering",
+        "Automation",
+        "Stock"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-when-catalog-stock-confirmed",
+      "sliceKind": "automation",
+      "name": "When Catalog Stock Confirmed",
+      "description": "Catalog evt-order-stock-confirmed → Mark Order Stock Confirmed.",
+      "order": 480,
+      "position": 2340,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T17:10:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-on-catalog-stock-confirmed"
+      ],
+      "questions": [],
+      "errors": [
+        "error-order-not-found-on-stock-confirmed",
+        "error-order-id-required-on-stock-confirmed",
+        "error-order-request-id-required-on-stock-confirmed"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-stock-confirmed-happy"
+      ],
+      "commands": [
+        "cmd-mark-order-stock-confirmed"
+      ],
+      "events": [
+        "evt-order-status-stock-confirmed"
+      ],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-awaiting-validation"
+      ],
+      "tags": [
+        "Ordering",
+        "Stock",
+        "PaymentHandoff"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-mark-order-stock-confirmed",
+      "sliceKind": "state-change",
+      "name": "Mark Order Stock Confirmed",
+      "description": "AwaitingValidation → StockConfirmed after Catalog Order Stock Confirmed. Emits status event for Payment to charge.",
+      "order": 500,
+      "position": 2768,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-route-catalog-stock-rejected"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-cancel-order-for-stock"
+      ],
+      "tags": [
+        "Ordering",
+        "Automation",
+        "Stock"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-when-catalog-stock-rejected",
+      "sliceKind": "automation",
+      "name": "When Catalog Stock Rejected",
+      "description": "Catalog evt-order-stock-rejected → Cancel Order For Insufficient Stock.",
+      "order": 580,
+      "position": 3196,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-on-catalog-stock-rejected"
+      ],
+      "questions": [],
+      "errors": [
+        "error-order-not-found-on-cancel-for-stock",
+        "error-order-id-required-on-cancel-for-stock",
+        "error-order-request-id-required-on-cancel-for-stock"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-cancel-for-stock-happy"
+      ],
+      "commands": [
+        "cmd-cancel-order-for-stock"
+      ],
+      "events": [
+        "evt-order-cancelled-for-stock"
+      ],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-awaiting-validation"
+      ],
+      "tags": [
+        "Ordering",
+        "Stock"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-cancel-order-for-stock",
+      "sliceKind": "state-change",
+      "name": "Cancel Order For Insufficient Stock",
+      "description": "AwaitingValidation → Cancelled when Catalog rejects stock (SetCancelledStatusWhenStockIsRejected).",
+      "order": 600,
+      "position": 3624,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-route-payment-succeeded"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-paid"
+      ],
+      "tags": [
+        "Ordering",
+        "Automation",
+        "Payment",
+        "ForwardRef"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-when-payment-succeeded",
+      "sliceKind": "automation",
+      "name": "When Payment Succeeded",
+      "description": "Payment evt-payment-succeeded → Mark Order Paid (forward-ref until Payment workspace exists).",
+      "order": 650,
+      "position": 4052,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-on-payment-succeeded"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [
+        "gwt-mark-paid-happy"
+      ],
+      "commands": [
+        "cmd-mark-order-paid"
+      ],
+      "events": [
+        "evt-order-paid"
+      ],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-stock-confirmed"
+      ],
+      "tags": [
+        "Ordering",
+        "Payment"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-mark-order-paid",
+      "sliceKind": "state-change",
+      "name": "Mark Order Paid",
+      "description": "StockConfirmed → Paid after payment succeeds. Emits evt-order-paid for Catalog stock deduction.",
+      "order": 700,
+      "position": 4480,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "id": "slice-when-payment-failed",
+      "type": "vertical",
+      "sliceKind": "automation",
+      "name": "When Payment Failed",
+      "description": "Payment evt-payment-failed → Cancel Order (shopper/operator cancel command).",
+      "position": 4908,
+      "width": 400,
+      "height": 420,
+      "order": 750,
+      "actorRoleId": "role-store-operator",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Ordering",
+        "Automation",
+        "Payment"
+      ],
+      "dependencies": [
+        "slice-cancel-order"
+      ],
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "boundedContext": "Ordering",
+      "commands": [],
+      "events": [],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-route-payment-failed"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [
+        "screen-cancel-order"
+      ],
+      "processes": [],
+      "questions": [],
+      "errors": [
+        "error-cannot-cancel-order"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-cancel-order-happy",
+        "gwt-cancel-order-illegal"
+      ],
+      "commands": [
+        "cmd-cancel-order"
+      ],
+      "events": [
+        "evt-order-cancelled"
+      ],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-shopper",
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-place-order"
+      ],
+      "tags": [
+        "Ordering",
+        "Shopper"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-cancel-order",
+      "sliceKind": "state-change",
+      "name": "Cancel Order",
+      "description": "Shopper or operator cancels before Paid/Shipped (eShop CancelOrderCommand).",
+      "order": 800,
+      "position": 5336,
+      "actorRoleId": "role-shopper"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-08T02:45:00Z",
+      "boundedContext": "Ordering",
+      "views": [],
+      "screens": [],
+      "processes": [],
+      "questions": [],
+      "errors": [
+        "error-cannot-ship-order"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-ship-order-happy",
+        "gwt-ship-order-illegal"
+      ],
+      "commands": [
+        "cmd-ship-order"
+      ],
+      "events": [
+        "evt-order-shipped"
+      ],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-store-operator"
+      ],
+      "dependencies": [
+        "slice-mark-order-paid"
+      ],
+      "tags": [
+        "Ordering",
+        "Backoffice"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-ship-order",
+      "sliceKind": "state-change",
+      "name": "Ship Order",
+      "description": "Operator ships a Paid order (eShop ShipOrderCommand).",
+      "order": 900,
+      "position": 5764,
+      "actorRoleId": "role-store-operator"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:05:00Z",
+      "lastUpdated": "2026-10-06T15:05:00Z",
+      "boundedContext": "Ordering",
+      "views": [
+        "view-orders-by-shopper"
+      ],
+      "screens": [
+        "screen-orders-list-display"
+      ],
+      "processes": [],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [
+        "entity-order"
+      ],
+      "roles": [
+        "role-shopper"
+      ],
+      "dependencies": [
+        "slice-place-order"
+      ],
+      "tags": [
+        "Ordering",
+        "Shopper",
+        "StateView"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "id": "slice-orders-by-shopper",
+      "sliceKind": "state-view",
+      "name": "Orders By Shopper",
+      "description": "Shopper order list / history (GET api/orders).",
+      "order": 1000,
+      "position": 6192,
+      "actorRoleId": "role-shopper"
+    }
+  ],
+  "groups": [],
+  "connections": [],
+  "sequenceLayout": {
+    "mode": "structured",
+    "actorLanes": [],
+    "eventAssignments": {},
+    "eventSequence": [],
+    "options": {
+      "fixedLaneHeight": 120
+    }
+  }
+}

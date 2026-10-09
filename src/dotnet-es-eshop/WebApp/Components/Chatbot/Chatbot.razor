@@ -1,0 +1,101 @@
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IJSRuntime JS
+
+<div class="floating-pane" id="chatbot-pane" role="dialog" aria-label="Shopping assistant">
+    <header class="chatbot-header" data-chat-drag-handle>
+        <span class="chatbot-title">
+            Shopping assistant
+        </span>
+        <div class="chatbot-header-actions">
+            <button type="button" class="chatbot-size" data-chat-size aria-pressed="false" title="Toggle wide view" aria-label="Toggle wide view">
+                <svg class="chatbot-size-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 8 4 12l4 4" />
+                    <path d="m16 8 4 4-4 4" />
+                    <path d="M4 12h16" />
+                </svg>
+                <svg class="chatbot-size-condense" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m4 8 4 4-4 4" />
+                    <path d="m20 8-4 4 4 4" />
+                    <path d="M9 12h6" />
+                </svg>
+            </button>
+            <button type="button" class="chatbot-close" data-chat-close title="Close" aria-label="Close assistant">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="chatbot-chat" @ref="chat">
+        @foreach (var message in lines)
+        {
+            <p @key="@message" class="message message-@message.Role">@MessageProcessor.AllowImages(message.Text)</p>
+        }
+    </div>
+
+    <form class="chatbot-input" @onsubmit="SendMessageAsync">
+        <textarea placeholder="Ask about products, orders or recommendations..." aria-label="Message to the shopping assistant" @ref="@textbox" @bind="messageToSend"></textarea>
+        <button type="submit" class="chatbot-send" title="Send" aria-label="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+        </button>
+    </form>
+
+    <span class="chatbot-grip chatbot-grip-n" data-chat-resize="n" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-s" data-chat-resize="s" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-e" data-chat-resize="e" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-w" data-chat-resize="w" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-nw" data-chat-resize="nw" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-ne" data-chat-resize="ne" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-sw" data-chat-resize="sw" aria-hidden="true"></span>
+    <span class="chatbot-grip chatbot-grip-se" data-chat-resize="se" aria-hidden="true">
+        <span class="chatbot-grip-mark" aria-hidden="true"></span>
+    </span>
+</div>
+
+@code {
+    // SearchCatalog replaces catalog search used by this panel. Replies stay example text.
+    private const string ExampleReply = "Example data. This reply is not from a model.";
+
+    private readonly List<ChatLine> lines = [];
+    private int nextLineId = 1;
+
+    private ElementReference textbox;
+    private ElementReference chat;
+    private string? messageToSend;
+    private IJSObjectReference? jsModule;
+
+    protected override void OnInitialized()
+    {
+        lines.Add(new ChatLine(nextLineId++, "assistant", ExampleReply));
+    }
+
+    private Task SendMessageAsync()
+    {
+        var messageCopy = messageToSend?.Trim();
+        messageToSend = null;
+
+        if (!string.IsNullOrEmpty(messageCopy))
+        {
+            lines.Add(new ChatLine(nextLineId++, "user", messageCopy));
+            lines.Add(new ChatLine(nextLineId++, "assistant", ExampleReply));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        jsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Chatbot/Chatbot.razor.js");
+        await jsModule.InvokeVoidAsync("scrollToEnd", chat);
+
+        if (firstRender)
+        {
+            await jsModule.InvokeVoidAsync("submitOnEnter", textbox);
+        }
+    }
+
+    private sealed record ChatLine(int Id, string Role, string Text);
+}

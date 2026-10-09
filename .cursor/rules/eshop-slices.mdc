@@ -1,0 +1,21 @@
+---
+description: Parallel slice wiring for dotnet-es-eshop. Slices add files. They leave Program.cs and aggregate cores alone.
+globs: src/dotnet-es-eshop/**/Slices/**,src/dotnet-es-eshop/**/Aggregates/**,src/dotnet-es-eshop/**/Program.cs
+alwaysApply: false
+---
+
+# eShop slices
+
+Do not add lines to `Program.cs`. Reactors and event processors are found by `AddEShopSlices(serviceAssembly)`. View routes are found the same way. Commands still use the one `AddLawnDartHttpCommands` scan per service.
+
+Put the slice's aggregate behavior and state updates in the slice folder. Add `Slices/<SliceName>/<Aggregate>.<SliceName>.cs`. That file holds a partial aggregate part (`Handle` and the slice's own error constants) and a partial state part (`internal void Apply(YourEvent e)` for each event the slice appends). Use the aggregate's namespace in that file. Keep that namespace. Changing it splits the partial class. Status values already exist on the core class. Do not edit `Aggregates/<Name>/<Name>.cs` or `<Name>State.cs`.
+
+Put slice-only helpers in a `file static class`.
+
+Example: `Ordering.API/Slices/MarkOrderStockConfirmed/Order.MarkOrderStockConfirmed.cs` uses namespace `LawnDart.Samples.EShop.Ordering.API.Aggregates.Order`.
+
+A slice that needs extra services or a view route adds an `IEShopSliceModule` in its own folder. Command slices are API only. The only extra route a slice may add is `GET /views/{slice-name}`.
+
+Describe a new shared event in its XML comments. Do not edit `Shared/Events/README.md`. Do not edit `.slices/index.json`, the context hooks, or the solution file.
+
+A reactor registration test calls `AddEShopReactors(serviceAssembly)` and asserts one hosted service for its own reactor and event.

@@ -1,0 +1,18 @@
+---
+description: Optional sample-repo changelog under [Unreleased]
+alwaysApply: true
+---
+
+# Changelog
+
+This repository does not require a product CHANGELOG or MinVer release ritual.
+
+If `CHANGELOG.md` exists, add a bullet under `## [Unreleased]` for user-visible
+sample changes in the same change. Use Keep a Changelog categories (`Added`,
+`Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`). Write the bullet in
+user voice, not commit voice. Do not invent a version heading.
+
+If there is no `CHANGELOG.md`, skip changelog updates.
+
+Skip: internal refactors with no behavior change, test-only work,
+comment or formatting-only edits, and private planning files.

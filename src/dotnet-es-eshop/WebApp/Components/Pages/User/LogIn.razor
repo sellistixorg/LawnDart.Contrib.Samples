@@ -1,0 +1,127 @@
+﻿@page "/user/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject NavigationManager Nav
+@inject ShopperSession Shopper
+@inject ShopperSignInClient SignInClient
+
+<PageTitle>Sign in | AdventureWorks</PageTitle>
+<SectionContent SectionName="page-header-title">Sign in</SectionContent>
+
+<div class="sign-in">
+    @if (string.IsNullOrEmpty(error) && Shopper.IsSignedIn)
+    {
+        <p>@SignedInText</p>
+        <p><a href="@continueUrl">Continue</a></p>
+    }
+    else
+    {
+        <form method="post" @formname="sign-in" @onsubmit="SignInAsync" data-enhance="false">
+            <AntiforgeryToken />
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="sign-in-error" role="alert">@error</p>
+            }
+            <label for="login-username">User name</label>
+            <input id="login-username" name="UserName" value="@UserName" placeholder="User name" autocomplete="username" autofocus />
+            <label for="login-password">Password</label>
+            <input id="login-password" name="Password" type="password" placeholder="Password" autocomplete="current-password" />
+            <label class="sign-in-remember">
+                <input type="checkbox" name="RememberLogin" value="true" checked="@RememberLogin" />
+                Remember me
+            </label>
+            <p class="sign-in-hint">The default users are alice and bob, password Pass123$.</p>
+            <button class="button button-primary" type="submit">Login</button>
+        </form>
+    }
+</div>
+
+@code {
+    private string? error;
+    private string continueUrl = "/";
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromForm(FormName = "sign-in")]
+    public string? UserName { get; set; }
+
+    [SupplyParameterFromForm(FormName = "sign-in")]
+    public string? Password { get; set; }
+
+    [SupplyParameterFromForm(FormName = "sign-in")]
+    public bool RememberLogin { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private string SignedInText =>
+        string.IsNullOrWhiteSpace(Shopper.DisplayName)
+            ? "Signed in."
+            : $"Signed in as {Shopper.DisplayName}.";
+
+    protected override void OnInitialized()
+    {
+        continueUrl = ShopperReturnUrl.Local(ReturnUrl);
+    }
+
+    private async Task SignInAsync()
+    {
+        error = null;
+        var target = ShopperReturnUrl.Local(ReturnUrl);
+        continueUrl = target;
+
+        if (string.IsNullOrWhiteSpace(UserName) || string.IsNullOrEmpty(Password))
+        {
+            error = ShopperSignInClient.InvalidCredentialsMessage;
+            return;
+        }
+
+        if (HttpContext is null)
+        {
+            error = ShopperSignInClient.UnavailableMessage;
+            return;
+        }
+
+        var outcome = await SignInClient.SignInAsync(
+            UserName.Trim(),
+            Password,
+            RememberLogin,
+            target,
+            HttpContext.RequestAborted);
+
+        if (outcome.Rejected)
+        {
+            error = ShopperSignInClient.InvalidCredentialsMessage;
+            Password = "";
+            return;
+        }
+
+        if (!outcome.Succeeded)
+        {
+            error = ShopperSignInClient.UnavailableMessage;
+            Password = "";
+            return;
+        }
+
+        var displayName = outcome.DisplayName;
+        if (string.IsNullOrWhiteSpace(displayName))
+            displayName = UserName.Trim();
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            ShopperSession.CreatePrincipal(
+                outcome.AccountId,
+                displayName,
+                outcome.AccessToken,
+                outcome.AccessTokenExpiresAt),
+            new AuthenticationProperties
+            {
+                IsPersistent = RememberLogin,
+                RedirectUri = target
+            });
+        Password = "";
+        Nav.NavigateTo(target, forceLoad: true);
+    }
+}

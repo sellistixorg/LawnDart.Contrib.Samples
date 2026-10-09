@@ -1,0 +1,1305 @@
+{
+  "id": "dotnet-lawndart-eshop-payment",
+  "name": "dotnet LawnDart eShop Payment",
+  "description": "Payment bounded context for a LawnDart-style rewrite of Microsoft eShop PaymentProcessor. Subscribes to Ordering evt-order-status-stock-confirmed, charges via Payment Gateway, emits evt-payment-succeeded (Ordering Mark Order Paid) and evt-payment-failed. eShop’s config boolean is a test double, not the business model.",
+  "tags": [
+    "eShop",
+    "LawnDart",
+    "Payment",
+    "dotnet"
+  ],
+  "projectName": "dotnet ES eShop",
+  "lastModified": 1791479400000,
+  "settings": {
+    "hoursPerPoint": 2,
+    "complexityMultiplier": 1.5,
+    "defaultWidgetComplexity": 1
+  },
+  "enumerations": [],
+  "ruleSets": [],
+  "widgets": [
+    {
+      "id": "role-payment-system",
+      "type": "role",
+      "name": "Payment System",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 140,
+      "height": 69,
+      "description": "Automated payment processor (eShop PaymentProcessor worker).",
+      "tags": [
+        "Role",
+        "System"
+      ],
+      "permissions": [
+        "payment.charge",
+        "payment.recordSuccess",
+        "payment.recordFailure"
+      ],
+      "level": "System"
+    },
+    {
+      "id": "entity-payment-attempt",
+      "type": "entity",
+      "name": "Payment Attempt",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 150,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "One charge attempt for an order. Stream key: payment-attempt:{attemptId}. eShop simulates success/fail via config; LawnDart models a real gateway intent.",
+      "tags": [
+        "AggregateRoot",
+        "Payment"
+      ],
+      "state": [
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order being charged",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Charge amount",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Currency",
+          "type": "string",
+          "description": "Currency code",
+          "order": 4,
+          "required": false
+        },
+        {
+          "name": "Status",
+          "type": "string",
+          "description": "Requested|Succeeded|Failed",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "GatewayReference",
+          "type": "string",
+          "description": "External gateway reference",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "FailureReason",
+          "type": "string",
+          "description": "Failure detail if any",
+          "order": 7,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "proc-route-order-status-stock-confirmed",
+      "type": "process",
+      "name": "Route Order Status Stock Confirmed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-when-order-status-stock-confirmed",
+      "description": "Subscribes to Ordering-owned evt-order-status-stock-confirmed.",
+      "tags": [
+        "Automation"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Charge Order Payment",
+          "description": "Pass order id, amount, buyer id"
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-order-status-stock-confirmed"
+      ],
+      "issuesCommandId": "cmd-charge-order-payment"
+    },
+    {
+      "id": "proc-on-order-ready-for-payment",
+      "type": "process",
+      "name": "On Order Ready For Payment",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-charge-order-payment",
+      "description": "Process trigger after Ordering Order Status Stock Confirmed (via automation).",
+      "tags": [
+        "Trigger"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive stock-confirmed order",
+          "description": "From Ordering evt-order-status-stock-confirmed"
+        }
+      ]
+    },
+    {
+      "id": "ext-payment-gateway-outbound",
+      "type": "external",
+      "name": "Payment Gateway",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 160,
+      "height": 45,
+      "sliceId": "slice-charge-order-payment",
+      "description": "Outbound charge request to the payment gateway. Upstream this is a simulated stub driven by PaymentOptions.PaymentSucceeded.",
+      "tags": [
+        "External",
+        "Outbound"
+      ],
+      "externalRole": "outbound"
+    },
+    {
+      "id": "cmd-charge-order-payment",
+      "type": "command",
+      "name": "Charge Order Payment",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-charge-order-payment",
+      "description": "Creates a payment attempt and sends a charge request to the gateway.",
+      "tags": [
+        "Payment"
+      ],
+      "isAsync": true,
+      "handler": "PaymentCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "payment.charge"
+      ],
+      "aggregateRootId": "entity-payment-attempt",
+      "events": [
+        "evt-payment-charge-requested"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order to charge",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Amount to charge",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Currency",
+          "type": "string",
+          "description": "Currency code",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id",
+          "order": 6,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-payment-charge-requested",
+      "type": "event",
+      "name": "Payment Charge Requested",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-charge-order-payment",
+      "description": "Charge request sent / recorded; waiting on gateway outcome.",
+      "tags": [
+        "DomainEvent",
+        "Payment"
+      ],
+      "eventType": "Domain Event",
+      "source": "Payment Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When requested",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Amount",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Status",
+          "type": "string",
+          "description": "Requested",
+          "order": 6,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-charge-payment-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-charge-order-payment",
+      "description": "When Charge Order Payment then Payment Charge Requested.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-charge-order-payment",
+      "thenEvents": [
+        "evt-payment-charge-requested"
+      ]
+    },
+    {
+      "id": "ext-payment-gateway-inbound-success",
+      "type": "external",
+      "name": "Payment Gateway Success",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 160,
+      "height": 45,
+      "sliceId": "slice-translate-gateway-success",
+      "description": "Inbound success signal from the payment gateway. Upstream: simulated stub (PaymentOptions.PaymentSucceeded = true).",
+      "tags": [
+        "External",
+        "Inbound"
+      ],
+      "externalRole": "inbound"
+    },
+    {
+      "id": "cmd-record-payment-succeeded",
+      "type": "command",
+      "name": "Record Payment Succeeded",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-record-payment-succeeded",
+      "description": "Marks the payment attempt succeeded and notifies Ordering.",
+      "tags": [
+        "Payment"
+      ],
+      "isAsync": true,
+      "handler": "PaymentCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "payment.recordSuccess"
+      ],
+      "aggregateRootId": "entity-payment-attempt",
+      "events": [
+        "evt-payment-succeeded"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "GatewayReference",
+          "type": "string",
+          "description": "Gateway transaction reference",
+          "order": 4,
+          "required": false
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Charged amount",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-payment-succeeded",
+      "type": "event",
+      "name": "Payment Succeeded",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-record-payment-succeeded",
+      "description": "Payment succeeded. Ordering automation When Payment Succeeded subscribes to evt-payment-succeeded.",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Payment",
+        "OrderingHandoff"
+      ],
+      "eventType": "Domain Event",
+      "source": "Payment Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When succeeded",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "GatewayReference",
+          "type": "string",
+          "description": "Gateway reference",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Charged amount",
+          "order": 6,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "gwt-record-success-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-record-payment-succeeded",
+      "description": "Given Payment Charge Requested, when Record Payment Succeeded then Payment Succeeded.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-payment-charge-requested"
+      ],
+      "whenCommandId": "cmd-record-payment-succeeded",
+      "thenEvents": [
+        "evt-payment-succeeded"
+      ]
+    },
+    {
+      "id": "ext-payment-gateway-inbound-failure",
+      "type": "external",
+      "name": "Payment Gateway Failure",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 160,
+      "height": 45,
+      "sliceId": "slice-translate-gateway-failure",
+      "description": "Inbound failure signal from the payment gateway. Upstream: simulated stub (PaymentOptions.PaymentSucceeded = false).",
+      "tags": [
+        "External",
+        "Inbound"
+      ],
+      "externalRole": "inbound"
+    },
+    {
+      "id": "cmd-record-payment-failed",
+      "type": "command",
+      "name": "Record Payment Failed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-record-payment-failed",
+      "description": "Marks the payment attempt failed and notifies Ordering.",
+      "tags": [
+        "Payment"
+      ],
+      "isAsync": true,
+      "handler": "PaymentCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "payment.recordFailure"
+      ],
+      "aggregateRootId": "entity-payment-attempt",
+      "events": [
+        "evt-payment-failed"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "FailureReason",
+          "type": "string",
+          "description": "Why the charge failed",
+          "order": 4,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-payment-failed",
+      "type": "event",
+      "name": "Payment Failed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-record-payment-failed",
+      "description": "Payment failed. Ordering's When Payment Failed automation issues Cancel Order (evt-payment-failed).",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Payment",
+        "OrderingHandoff"
+      ],
+      "eventType": "Domain Event",
+      "source": "Payment Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When failed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Payment attempt id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "FailureReason",
+          "type": "string",
+          "description": "Failure detail",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "error-payment-declined",
+      "type": "error",
+      "name": "Payment Declined",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-record-payment-failed",
+      "description": "Gateway declined the charge.",
+      "tags": [],
+      "errorCode": "PAYMENT_DECLINED",
+      "severity": "high"
+    },
+    {
+      "id": "gwt-record-failure-happy",
+      "type": "gwt",
+      "name": "Gateway declined",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-record-payment-failed",
+      "description": "Given Payment Charge Requested, when Record Payment Failed then Payment Failed.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-payment-charge-requested"
+      ],
+      "whenCommandId": "cmd-record-payment-failed",
+      "thenEvents": [
+        "evt-payment-failed"
+      ]
+    },
+    {
+      "id": "view-payment-attempt-status",
+      "type": "view",
+      "name": "Payment Attempt Status",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-06T15:10:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-payment-attempt-status",
+      "description": "Projection of payment attempt status for an order.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-payment-charge-requested",
+        "evt-payment-succeeded",
+        "evt-payment-failed"
+      ],
+      "requiredPermissions": [
+        "payment.charge"
+      ],
+      "state": [
+        {
+          "name": "AttemptId",
+          "type": "guid",
+          "description": "Attempt id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Amount",
+          "type": "decimal",
+          "description": "Amount",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Status",
+          "type": "string",
+          "description": "Requested|Succeeded|Failed",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "GatewayReference",
+          "type": "string",
+          "description": "Gateway reference",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "FailureReason",
+          "type": "string",
+          "description": "Failure detail",
+          "order": 6,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-order-status-stock-confirmed",
+      "type": "event",
+      "name": "Order Status Stock Confirmed (from Ordering)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-ordering-signals-payment",
+      "description": "Local mirror of Ordering evt-order-status-stock-confirmed. Producer lives in Ordering Mark Order Stock Confirmed.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Ordering"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-08T17:10:00Z",
+      "eventType": "Integration Event",
+      "source": "Ordering Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When confirmed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id. The original eShop carries the buyer id but no total; the total is added so Payment knows the amount.",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "OrderTotal",
+          "type": "decimal",
+          "description": "Amount to charge. The original eShop carries the buyer id but no total; the total is added so Payment knows the amount.",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "BuyerName",
+          "type": "string",
+          "description": "Buyer display name (the user name stored on the order)",
+          "order": 6,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "proc-hold-slice-inbound-ordering-signals-payment",
+      "type": "process",
+      "name": "Hold Integration Mirrors",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-inbound-ordering-signals-payment",
+      "description": "Process trigger for the import-mirror holder slice. These events exist so automation subscribedEventIds resolve locally; they are not business emissions of Catalog/Basket/Payment/Ordering command slices.",
+      "tags": [
+        "Trigger",
+        "ImportFix"
+      ],
+      "stepItems": [
+        {
+          "name": "Resolve cross-workspace subscriptions",
+          "description": "Local mirror widgets only"
+        }
+      ]
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 220,
+      "height": 45,
+      "tags": [
+        "Adapter",
+        "Translation"
+      ],
+      "id": "proc-adapt-gateway-success",
+      "name": "Gateway Succeeded Adapter",
+      "sliceId": "slice-translate-gateway-success",
+      "description": "Adapter: translates the gateway success signal into the Record Payment Succeeded command.",
+      "stepItems": [
+        {
+          "name": "Receive gateway success",
+          "description": "Callback, webhook, or simulator result"
+        },
+        {
+          "name": "Issue Record Payment Succeeded",
+          "description": "Pass order id and payment attempt id"
+        }
+      ],
+      "issuesCommandId": "cmd-record-payment-succeeded",
+      "type": "process"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 220,
+      "height": 45,
+      "tags": [
+        "Adapter",
+        "Translation"
+      ],
+      "id": "proc-adapt-gateway-failure",
+      "name": "Gateway Failed Adapter",
+      "sliceId": "slice-translate-gateway-failure",
+      "description": "Adapter: translates the gateway failure signal into the Record Payment Failed command.",
+      "stepItems": [
+        {
+          "name": "Receive gateway failure",
+          "description": "Callback, webhook, or simulator result"
+        },
+        {
+          "name": "Issue Record Payment Failed",
+          "description": "Pass order id and payment attempt id"
+        }
+      ],
+      "issuesCommandId": "cmd-record-payment-failed",
+      "type": "process"
+    }
+  ],
+  "swimlanes": [
+    {
+      "id": "slice-inbound-ordering-signals-payment",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Inbound Ordering Signals (mirrors)",
+      "description": "Import-only holder for Ordering evt-order-status-stock-confirmed so Payment automation resolves subscribedEventIds without polluting Charge Order Payment Events zone. Modeling scaffolding only, no code; real delivery is the producing context's integration event over the bus.",
+      "position": 200,
+      "width": 400,
+      "height": 520,
+      "order": 80,
+      "actorRoleId": "role-payment-system",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 2,
+      "tags": [
+        "IntegrationMirror",
+        "ImportFix",
+        "Inbound"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-08T17:10:00Z",
+      "boundedContext": "Payment",
+      "commands": [],
+      "events": [
+        "evt-order-status-stock-confirmed"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-hold-slice-inbound-ordering-signals-payment"
+      ],
+      "roles": [
+        "role-payment-system"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Payment",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-route-order-status-stock-confirmed"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [
+        "slice-charge-order-payment"
+      ],
+      "tags": [
+        "Payment",
+        "Automation",
+        "Ordering"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-when-order-status-stock-confirmed",
+      "sliceKind": "automation",
+      "name": "When Order Status Stock Confirmed",
+      "description": "Ordering evt-order-status-stock-confirmed → Charge Order Payment. Aligns with PaymentProcessor handler on OrderStatusChangedToStockConfirmed.",
+      "order": 90,
+      "position": 628,
+      "actorRoleId": "role-payment-system"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Payment",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-on-order-ready-for-payment"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [
+        "ext-payment-gateway-outbound"
+      ],
+      "gwts": [
+        "gwt-charge-payment-happy"
+      ],
+      "commands": [
+        "cmd-charge-order-payment"
+      ],
+      "events": [
+        "evt-payment-charge-requested"
+      ],
+      "entities": [
+        "entity-payment-attempt"
+      ],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [],
+      "tags": [
+        "Payment",
+        "Gateway"
+      ],
+      "complexityScore": 3,
+      "effortEstimate": 10,
+      "id": "slice-charge-order-payment",
+      "sliceKind": "state-change",
+      "name": "Charge Order Payment",
+      "description": "Requests a charge against the payment gateway for an order that reached StockConfirmed. Outbound to Payment Gateway (Orchestrate zone). Upstream the gateway is a simulated stub: PaymentProcessor reads the PaymentOptions.PaymentSucceeded config flag (appsettings \"PaymentSucceeded\": true) and publishes OrderPaymentSucceeded or OrderPaymentFailed without calling a real gateway.",
+      "order": 100,
+      "position": 1056,
+      "actorRoleId": "role-payment-system"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "boundedContext": "Payment",
+      "views": [],
+      "screens": [],
+      "processes": [],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [
+        "gwt-record-success-happy"
+      ],
+      "commands": [
+        "cmd-record-payment-succeeded"
+      ],
+      "events": [
+        "evt-payment-succeeded"
+      ],
+      "entities": [
+        "entity-payment-attempt"
+      ],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [
+        "slice-charge-order-payment",
+        "slice-translate-gateway-success"
+      ],
+      "tags": [
+        "Payment",
+        "OrderingHandoff"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-record-payment-succeeded",
+      "sliceKind": "state-change",
+      "name": "Record Payment Succeeded",
+      "description": "Records gateway success and emits evt-payment-succeeded so Ordering can Mark Order Paid. Triggered by the Translate Gateway Succeeded slice.",
+      "order": 200,
+      "position": 1912,
+      "actorRoleId": "role-payment-system"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Payment",
+      "views": [],
+      "screens": [],
+      "processes": [],
+      "questions": [],
+      "errors": [
+        "error-payment-declined"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-record-failure-happy"
+      ],
+      "commands": [
+        "cmd-record-payment-failed"
+      ],
+      "events": [
+        "evt-payment-failed"
+      ],
+      "entities": [
+        "entity-payment-attempt"
+      ],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [
+        "slice-charge-order-payment",
+        "slice-translate-gateway-failure"
+      ],
+      "tags": [
+        "Payment",
+        "OrderingHandoff"
+      ],
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "id": "slice-record-payment-failed",
+      "sliceKind": "state-change",
+      "name": "Record Payment Failed",
+      "description": "Records gateway failure and emits evt-payment-failed. Ordering's When Payment Failed automation issues Cancel Order on it. Triggered by the Translate Gateway Failed slice.",
+      "order": 300,
+      "position": 2768,
+      "actorRoleId": "role-payment-system"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-06T15:10:00Z",
+      "lastUpdated": "2026-10-08T02:45:00Z",
+      "boundedContext": "Payment",
+      "views": [
+        "view-payment-attempt-status"
+      ],
+      "screens": [],
+      "processes": [],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [
+        "entity-payment-attempt"
+      ],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [
+        "slice-charge-order-payment"
+      ],
+      "tags": [
+        "Payment",
+        "StateView"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-payment-attempt-status",
+      "sliceKind": "state-view",
+      "name": "Payment Attempt Status",
+      "description": "Read model of payment attempt lifecycle for ops/diagnostics.",
+      "order": 400,
+      "position": 3196,
+      "actorRoleId": "role-payment-system"
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-adapt-gateway-success"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [
+        "ext-payment-gateway-inbound-success"
+      ],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [
+        "slice-charge-order-payment"
+      ],
+      "tags": [
+        "Payment",
+        "Gateway",
+        "Translation"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-translate-gateway-success",
+      "sliceKind": "translation",
+      "name": "Translate Gateway Succeeded",
+      "order": 150,
+      "description": "Translation: inbound payment gateway success -> adapter -> Record Payment Succeeded. Upstream the gateway is a simulated stub: PaymentProcessor reads the PaymentOptions.PaymentSucceeded config flag (appsettings \"PaymentSucceeded\": true) and publishes OrderPaymentSucceeded or OrderPaymentFailed without calling a real gateway.",
+      "actorRoleId": "role-payment-system",
+      "boundedContext": "Payment",
+      "position": 1484
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 420,
+      "status": "Planned",
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "views": [],
+      "screens": [],
+      "processes": [
+        "proc-adapt-gateway-failure"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [
+        "ext-payment-gateway-inbound-failure"
+      ],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [],
+      "roles": [
+        "role-payment-system"
+      ],
+      "dependencies": [
+        "slice-charge-order-payment"
+      ],
+      "tags": [
+        "Payment",
+        "Gateway",
+        "Translation"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-translate-gateway-failure",
+      "sliceKind": "translation",
+      "name": "Translate Gateway Failed",
+      "order": 250,
+      "description": "Translation: inbound payment gateway failure -> adapter -> Record Payment Failed. Upstream the gateway is a simulated stub: PaymentProcessor reads the PaymentOptions.PaymentSucceeded config flag (appsettings \"PaymentSucceeded\": true) and publishes OrderPaymentSucceeded or OrderPaymentFailed without calling a real gateway.",
+      "actorRoleId": "role-payment-system",
+      "boundedContext": "Payment",
+      "position": 2340
+    }
+  ],
+  "groups": [],
+  "connections": [],
+  "sequenceLayout": {
+    "mode": "structured",
+    "actorLanes": [],
+    "eventAssignments": {},
+    "eventSequence": [],
+    "options": {
+      "fixedLaneHeight": 120
+    }
+  }
+}

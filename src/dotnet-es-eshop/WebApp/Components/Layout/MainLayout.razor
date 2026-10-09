@@ -1,0 +1,28 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<HeaderBar />
+<main class="eshop-main">
+    @Body
+</main>
+<FooterBar />
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="@ReloadHref" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    private string ReloadHref
+    {
+        get
+        {
+            var relative = Nav.ToBaseRelativePath(Nav.Uri);
+            if (string.IsNullOrEmpty(relative))
+                return "/";
+
+            return relative.StartsWith('/') ? relative : "/" + relative;
+        }
+    }
+}

@@ -1,0 +1,82 @@
+# Restores, builds, and tests src/dotnet-es-eshop/LawnDart.Samples.EShop.sln.
+# Runs on every pull request to main and every push to main. No path filter:
+# a solution-level build picks up new slice projects without editing this file.
+#
+# RabbitMQ is a service container and ESHOP_REQUIRE_RABBITMQ=1 is set.
+# RabbitMqTransportSmokeTests then connects to the broker. Without that
+# variable, the three broker tests return success when port 5672 is closed.
+#
+# SQL Server is not started. Infrastructure tests place a SQL connection
+# string in configuration and assert registrations. They do not open a database.
+# The Aspire AppHost project is compiled with the solution and is not executed.
+name: eShop
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eshop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  ESHOP_REQUIRE_RABBITMQ: "1"
+  ESHOP_RABBITMQ: amqp://eshop:eshop@127.0.0.1:5672
+
+jobs:
+  build-test:
+    name: Restore, build, and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src/dotnet-es-eshop
+    services:
+      rabbitmq:
+        image: rabbitmq:4-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: eshop
+          RABBITMQ_DEFAULT_PASS: eshop
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_port_listener 5672"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 10s
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: src/dotnet-es-eshop/global.json
+
+      - name: Restore
+        run: dotnet restore LawnDart.Samples.EShop.sln
+
+      - name: Build
+        run: dotnet build LawnDart.Samples.EShop.sln --no-restore
+
+      - name: Wait for RabbitMQ
+        run: |
+          for _ in $(seq 1 30); do
+            if (echo >/dev/tcp/127.0.0.1/5672) >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "RabbitMQ did not accept connections on 127.0.0.1:5672"
+          exit 1
+
+      - name: Test
+        run: dotnet test LawnDart.Samples.EShop.sln --no-build

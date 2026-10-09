@@ -1,0 +1,25 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.1">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LawnDart.Samples.EShop.AppHost</RootNamespace>
+    <UserSecretsId>lawndart-samples-eshop-apphost</UserSecretsId>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="Aspire.Hosting.Redis" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Identity.API\LawnDart.Samples.EShop.Identity.API.csproj" />
+    <ProjectReference Include="..\Catalog.API\LawnDart.Samples.EShop.Catalog.API.csproj" />
+    <ProjectReference Include="..\Basket.API\LawnDart.Samples.EShop.Basket.API.csproj" />
+    <ProjectReference Include="..\Ordering.API\LawnDart.Samples.EShop.Ordering.API.csproj" />
+    <ProjectReference Include="..\OrderProcessor\LawnDart.Samples.EShop.OrderProcessor.csproj" />
+    <ProjectReference Include="..\PaymentProcessor\LawnDart.Samples.EShop.PaymentProcessor.csproj" />
+    <ProjectReference Include="..\Webhooks.API\LawnDart.Samples.EShop.Webhooks.API.csproj" />
+    <ProjectReference Include="..\WebhookClient\LawnDart.Samples.EShop.WebhookClient.csproj" />
+    <ProjectReference Include="..\WebApp\LawnDart.Samples.EShop.WebApp.csproj" />
+  </ItemGroup>
+</Project>

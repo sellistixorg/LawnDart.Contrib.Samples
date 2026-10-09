@@ -1,0 +1,3476 @@
+{
+  "id": "dotnet-lawndart-eshop-catalog",
+  "name": "dotnet LawnDart eShop Catalog",
+  "description": "Catalog bounded context for a LawnDart-style rewrite of Microsoft eShop Catalog.API. Backoffice populate first, then shopper browse/search, then stock reactions to Ordering. Brand/Type/Restock write gaps called out as questions.",
+  "tags": [
+    "eShop",
+    "LawnDart",
+    "Catalog",
+    "dotnet"
+  ],
+  "projectName": "dotnet ES eShop",
+  "lastModified": 1791487980000,
+  "settings": {
+    "hoursPerPoint": 2,
+    "complexityMultiplier": 1.5,
+    "defaultWidgetComplexity": 1
+  },
+  "enumerations": [],
+  "ruleSets": [],
+  "widgets": [
+    {
+      "id": "role-catalog-admin",
+      "type": "role",
+      "name": "Catalog Admin",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 140,
+      "height": 69,
+      "description": "Backoffice operator who defines brands, types, and catalog items.",
+      "tags": [
+        "Role",
+        "Backoffice"
+      ],
+      "permissions": [
+        "catalog.brand.define",
+        "catalog.type.define",
+        "catalog.item.add",
+        "catalog.item.update",
+        "catalog.item.remove",
+        "catalog.item.restock",
+        "catalog.stock.validate",
+        "catalog.stock.deduct"
+      ],
+      "level": "Staff"
+    },
+    {
+      "id": "role-shopper",
+      "type": "role",
+      "name": "Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 120,
+      "height": 69,
+      "description": "Customer who browses and searches the catalog (same business role as Identity Shopper).",
+      "tags": [
+        "Role",
+        "Shopper"
+      ],
+      "permissions": [
+        "catalog.browse",
+        "catalog.viewItem",
+        "catalog.search"
+      ],
+      "level": "User"
+    },
+    {
+      "id": "entity-catalog-brand",
+      "type": "entity",
+      "name": "Catalog Brand",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-07T22:35:00Z",
+      "width": 140,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "Brand classification for catalog items (eShop CatalogBrand; seed + GET only today). Stream key: catalog-brand:{brandId}.",
+      "tags": [
+        "AggregateRoot",
+        "Catalog",
+        "CRUD-gap"
+      ],
+      "state": [
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Brand display name",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "entity-catalog-type",
+      "type": "entity",
+      "name": "Catalog Type",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-07T22:35:00Z",
+      "width": 140,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "Type/category classification for catalog items (eShop CatalogType; seed + GET only today). Stream key: catalog-type:{typeId}.",
+      "tags": [
+        "AggregateRoot",
+        "Catalog",
+        "CRUD-gap"
+      ],
+      "state": [
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Type display name",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "entity-catalog-item",
+      "type": "entity",
+      "name": "Catalog Item",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 140,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "Sellable product in the catalog. Stream key: catalog-item:{itemId}. Stock fields live on the item (eShop CatalogItem).",
+      "tags": [
+        "AggregateRoot",
+        "Catalog"
+      ],
+      "state": [
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Catalog item identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Product name",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Product description",
+          "order": 3,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Unit price",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "PictureFileName",
+          "type": "string",
+          "description": "Image file name",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Catalog brand id",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Catalog type id",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "AvailableStock",
+          "type": "integer",
+          "description": "Units currently available",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "RestockThreshold",
+          "type": "integer",
+          "description": "Reorder threshold",
+          "order": 9,
+          "required": false
+        },
+        {
+          "name": "MaxStockThreshold",
+          "type": "integer",
+          "description": "Maximum stock capacity",
+          "order": 10,
+          "required": false
+        },
+        {
+          "name": "OnReorder",
+          "type": "boolean",
+          "description": "Whether a restock is in progress",
+          "order": 11,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "cmd-define-catalog-brand",
+      "type": "command",
+      "name": "Define Catalog Brand",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T02:46:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-define-catalog-brand",
+      "description": "Defines a new brand used to classify catalog items.",
+      "tags": [
+        "Catalog",
+        "CRUD-gap"
+      ],
+      "isAsync": false,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "catalog.brand.define"
+      ],
+      "events": [
+        "evt-catalog-brand-defined"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id to assign",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Brand name",
+          "order": 3,
+          "required": true
+        }
+      ],
+      "aggregateRootId": "entity-catalog-brand"
+    },
+    {
+      "id": "evt-catalog-brand-defined",
+      "type": "event",
+      "name": "Catalog Brand Defined",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-define-catalog-brand",
+      "description": "A catalog brand was defined.",
+      "tags": [
+        "DomainEvent",
+        "Catalog"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When defined",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Brand name",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-define-brand-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-define-catalog-brand",
+      "description": "When Define Catalog Brand then Catalog Brand Defined.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-define-catalog-brand",
+      "thenEvents": [
+        "evt-catalog-brand-defined"
+      ]
+    },
+    {
+      "id": "cmd-define-catalog-type",
+      "type": "command",
+      "name": "Define Catalog Type",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T02:46:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-define-catalog-type",
+      "description": "Defines a new catalog type/category.",
+      "tags": [
+        "Catalog",
+        "CRUD-gap"
+      ],
+      "isAsync": false,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "catalog.type.define"
+      ],
+      "events": [
+        "evt-catalog-type-defined"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id to assign",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Type name",
+          "order": 3,
+          "required": true
+        }
+      ],
+      "aggregateRootId": "entity-catalog-type"
+    },
+    {
+      "id": "evt-catalog-type-defined",
+      "type": "event",
+      "name": "Catalog Type Defined",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-define-catalog-type",
+      "description": "A catalog type was defined.",
+      "tags": [
+        "DomainEvent",
+        "Catalog"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When defined",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Type name",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-define-type-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-define-catalog-type",
+      "description": "When Define Catalog Type then Catalog Type Defined.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-define-catalog-type",
+      "thenEvents": [
+        "evt-catalog-type-defined"
+      ]
+    },
+    {
+      "id": "cmd-add-catalog-item",
+      "type": "command",
+      "name": "Add Catalog Item",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T02:46:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-add-catalog-item",
+      "description": "Creates a new catalog item with price, brand, type, and initial stock.",
+      "tags": [
+        "Catalog"
+      ],
+      "isAsync": false,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "catalog.item.add"
+      ],
+      "aggregateRootId": "entity-catalog-item",
+      "events": [
+        "evt-catalog-item-added"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id to assign",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Product name",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Description",
+          "order": 4,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Unit price",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "PictureFileName",
+          "type": "string",
+          "description": "Picture file name",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "AvailableStock",
+          "type": "integer",
+          "description": "Initial stock",
+          "order": 9,
+          "required": true
+        },
+        {
+          "name": "RestockThreshold",
+          "type": "integer",
+          "description": "Restock threshold",
+          "order": 10,
+          "required": false
+        },
+        {
+          "name": "MaxStockThreshold",
+          "type": "integer",
+          "description": "Max stock",
+          "order": 11,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-catalog-item-added",
+      "type": "event",
+      "name": "Catalog Item Added",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-add-catalog-item",
+      "description": "A catalog item was added. Tagged: catalog-item:{itemId}",
+      "tags": [
+        "DomainEvent",
+        "Catalog"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When added",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Product name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Description",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Unit price",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "PictureFileName",
+          "type": "string",
+          "description": "Picture file name",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id",
+          "order": 9,
+          "required": true
+        },
+        {
+          "name": "AvailableStock",
+          "type": "integer",
+          "description": "Initial stock",
+          "order": 10,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-add-item-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-add-catalog-item",
+      "description": "Given brand and type defined, when Add Catalog Item then Catalog Item Added.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-brand-defined",
+        "evt-catalog-type-defined"
+      ],
+      "whenCommandId": "cmd-add-catalog-item",
+      "thenEvents": [
+        "evt-catalog-item-added"
+      ]
+    },
+    {
+      "id": "view-catalog-item-admin",
+      "type": "view",
+      "name": "Catalog Item (Admin)",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-catalog-item-detail-admin",
+      "description": "Admin projection of catalog item including stock thresholds.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-updated",
+        "evt-catalog-item-price-changed",
+        "evt-catalog-item-restocked",
+        "evt-catalog-stock-deducted",
+        "evt-catalog-item-removed"
+      ],
+      "requiredPermissions": [
+        "catalog.item.add"
+      ],
+      "state": [
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Name",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Description",
+          "order": 3,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Price",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "AvailableStock",
+          "type": "integer",
+          "description": "Available stock",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "RestockThreshold",
+          "type": "integer",
+          "description": "Restock threshold",
+          "order": 8,
+          "required": false
+        },
+        {
+          "name": "MaxStockThreshold",
+          "type": "integer",
+          "description": "Max stock",
+          "order": 9,
+          "required": false
+        },
+        {
+          "name": "OnReorder",
+          "type": "boolean",
+          "description": "On reorder",
+          "order": 10,
+          "required": false
+        },
+        {
+          "name": "PictureFileName",
+          "type": "string",
+          "description": "Picture file name",
+          "order": 11,
+          "required": false
+        },
+        {
+          "name": "Removed",
+          "type": "boolean",
+          "description": "True after the item is removed (final soft delete). The admin route still returns the item.",
+          "order": 12,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "cmd-update-catalog-item",
+      "type": "command",
+      "name": "Update Catalog Item",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T02:46:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-catalog-item",
+      "description": "Replaces catalog item details; emits Price Changed when price differs.",
+      "tags": [
+        "Catalog"
+      ],
+      "isAsync": false,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "catalog.item.update"
+      ],
+      "aggregateRootId": "entity-catalog-item",
+      "events": [
+        "evt-catalog-item-updated",
+        "evt-catalog-item-price-changed"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item to update",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Product name",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Description",
+          "order": 4,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Unit price",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "PictureFileName",
+          "type": "string",
+          "description": "Picture file name",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id",
+          "order": 8,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-catalog-item-updated",
+      "type": "event",
+      "name": "Catalog Item Updated",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-catalog-item",
+      "description": "Catalog item details were updated.",
+      "tags": [
+        "DomainEvent",
+        "Catalog"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When updated",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Product name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Description",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Unit price",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "BrandId",
+          "type": "guid",
+          "description": "Brand id",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "TypeId",
+          "type": "guid",
+          "description": "Type id",
+          "order": 8,
+          "required": true
+        },
+        {
+          "name": "PictureFileName",
+          "type": "string",
+          "description": "Picture file name",
+          "order": 9,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-catalog-item-price-changed",
+      "type": "event",
+      "name": "Catalog Item Price Changed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-catalog-item",
+      "description": "Catalog item unit price changed (integration signal for other contexts). Basket does not consume it: basket lines keep add-time price snapshots.",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Catalog"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When price changed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OldPrice",
+          "type": "decimal",
+          "description": "Previous unit price",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "NewPrice",
+          "type": "decimal",
+          "description": "New unit price",
+          "order": 5,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-update-item-happy",
+      "type": "gwt",
+      "name": "Update without price change",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-update-catalog-item",
+      "description": "Given item added, when Update Catalog Item with same price then Catalog Item Updated.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-update-catalog-item",
+      "thenEvents": [
+        "evt-catalog-item-updated"
+      ]
+    },
+    {
+      "id": "gwt-update-item-price-changed",
+      "type": "gwt",
+      "name": "Price changed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-update-catalog-item",
+      "description": "Given item added, when Update Catalog Item with a new price then Catalog Item Updated and Catalog Item Price Changed.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-update-catalog-item",
+      "thenEvents": [
+        "evt-catalog-item-updated",
+        "evt-catalog-item-price-changed"
+      ]
+    },
+    {
+      "id": "error-catalog-item-not-found-on-update",
+      "type": "error",
+      "name": "Catalog Item Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-catalog-item",
+      "description": "Fires when the catalog item does not exist: the id was never added, or the item was removed (removal is final). Checked after the item id, name, brand, type and price are valid. Message: \"Catalog item does not exist.\"",
+      "tags": [],
+      "errorCode": "CATALOG_ITEM_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "id": "gwt-update-removed-item",
+      "name": "Removed item",
+      "sliceId": "slice-update-catalog-item",
+      "description": "Given Catalog Item Added and Catalog Item Removed, when Update Catalog Item then Catalog Item Not Found.",
+      "givenEvents": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-removed"
+      ],
+      "whenCommandId": "cmd-update-catalog-item",
+      "thenEvents": [],
+      "thenErrorId": "error-catalog-item-not-found-on-update",
+      "type": "gwt"
+    },
+    {
+      "id": "cmd-remove-catalog-item",
+      "type": "command",
+      "name": "Remove Catalog Item",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-catalog-item",
+      "description": "Removes a catalog item from sale. Final soft delete: the item must exist and not already be removed.",
+      "tags": [
+        "Catalog"
+      ],
+      "isAsync": false,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "catalog.item.remove"
+      ],
+      "aggregateRootId": "entity-catalog-item",
+      "events": [
+        "evt-catalog-item-removed"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item to remove",
+          "order": 2,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-catalog-item-removed",
+      "type": "event",
+      "name": "Catalog Item Removed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-catalog-item",
+      "description": "Catalog item was removed. Final soft delete: the item is marked removed (Exists false, Removed true) and cannot be added again.",
+      "tags": [
+        "DomainEvent",
+        "Catalog"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When removed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-remove-item-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-remove-catalog-item",
+      "description": "Given item added, when Remove Catalog Item then Catalog Item Removed. Removal is final (soft delete).",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-remove-catalog-item",
+      "thenEvents": [
+        "evt-catalog-item-removed"
+      ]
+    },
+    {
+      "id": "error-catalog-item-not-found-on-remove",
+      "type": "error",
+      "name": "Catalog Item Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-remove-catalog-item",
+      "description": "Fires when the catalog item does not exist: the id was never added, or the item was removed (removal is final). Message: \"Catalog item does not exist.\"",
+      "tags": [],
+      "errorCode": "CATALOG_ITEM_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "id": "gwt-remove-removed-item",
+      "name": "Removed item",
+      "sliceId": "slice-remove-catalog-item",
+      "description": "Given Catalog Item Added and Catalog Item Removed, when Remove Catalog Item then Catalog Item Not Found.",
+      "givenEvents": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-removed"
+      ],
+      "whenCommandId": "cmd-remove-catalog-item",
+      "thenEvents": [],
+      "thenErrorId": "error-catalog-item-not-found-on-remove",
+      "type": "gwt"
+    },
+    {
+      "id": "cmd-restock-catalog-item",
+      "type": "command",
+      "name": "Restock Catalog Item",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T02:46:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-restock-catalog-item",
+      "description": "Adds units to available stock up to MaxStockThreshold.",
+      "tags": [
+        "Catalog",
+        "CRUD-gap",
+        "Stock"
+      ],
+      "isAsync": false,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "API Call"
+      ],
+      "requiredPermissions": [
+        "catalog.item.restock"
+      ],
+      "aggregateRootId": "entity-catalog-item",
+      "events": [
+        "evt-catalog-item-restocked"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item to restock",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Quantity",
+          "type": "integer",
+          "description": "Units to add",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-catalog-item-restocked",
+      "type": "event",
+      "name": "Catalog Item Restocked",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-restock-catalog-item",
+      "description": "Stock was added to a catalog item.",
+      "tags": [
+        "DomainEvent",
+        "Catalog",
+        "Stock"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When restocked",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "QuantityAdded",
+          "type": "integer",
+          "description": "Units actually added",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "AvailableStock",
+          "type": "integer",
+          "description": "Stock after restock",
+          "order": 5,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-restock-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-restock-catalog-item",
+      "description": "Given item added, when Restock Catalog Item then Catalog Item Restocked.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-restock-catalog-item",
+      "thenEvents": [
+        "evt-catalog-item-restocked"
+      ]
+    },
+    {
+      "id": "error-catalog-item-not-found-on-restock",
+      "type": "error",
+      "name": "Catalog Item Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-restock-catalog-item",
+      "description": "Fires when the catalog item does not exist: the id was never added, or the item was removed (removal is final). Checked before the quantity. Message: \"Catalog item does not exist.\"",
+      "tags": [],
+      "errorCode": "CATALOG_ITEM_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "id": "gwt-restock-removed-item",
+      "name": "Removed item",
+      "sliceId": "slice-restock-catalog-item",
+      "description": "Given Catalog Item Added and Catalog Item Removed, when Restock Catalog Item then Catalog Item Not Found.",
+      "givenEvents": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-removed"
+      ],
+      "whenCommandId": "cmd-restock-catalog-item",
+      "thenEvents": [],
+      "thenErrorId": "error-catalog-item-not-found-on-restock",
+      "type": "gwt"
+    },
+    {
+      "id": "view-catalog-browser",
+      "type": "view",
+      "name": "Catalog Browser",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-browse-catalog",
+      "description": "Paginated item list plus facet counts for brands and types.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-updated",
+        "evt-catalog-item-removed",
+        "evt-catalog-item-restocked",
+        "evt-catalog-brand-defined",
+        "evt-catalog-type-defined",
+        "evt-catalog-item-price-changed",
+        "evt-catalog-stock-deducted"
+      ],
+      "requiredPermissions": [
+        "catalog.browse"
+      ],
+      "state": [
+        {
+          "name": "Items",
+          "type": "array",
+          "description": "Page of catalog item summaries (item id, name, price, picture URL, available stock). Picture URL is /product-images/{itemId} when PictureFileName is set; empty picture uses the example image.",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "TotalItems",
+          "type": "integer",
+          "description": "Total matching items",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "PageIndex",
+          "type": "integer",
+          "description": "Current page index",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "PageSize",
+          "type": "integer",
+          "description": "Page size",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BrandFacets",
+          "type": "array",
+          "description": "Brand id + count pairs (brand names come from the Catalog Brands And Types view)",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "TypeFacets",
+          "type": "array",
+          "description": "Type id + count pairs (type names come from the Catalog Brands And Types view)",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "SelectedBrandIds",
+          "type": "array",
+          "description": "Active brand filters",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "SelectedTypeIds",
+          "type": "array",
+          "description": "Active type filters",
+          "order": 8,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-browse-catalog-display",
+      "type": "screen",
+      "name": "Catalog",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-browse-catalog",
+      "description": "Shopper catalog browsing screen. Each item thumbnail uses /product-images/{itemId} when the summary carries a picture file name; empty picture uses the example image. WebApp GET /product-images/{id} forwards to Catalog GET /api/catalog/items/{id}/pic. Browse, search, the item page and the cart use /product-images/{id} when the stored picture is a file name; an empty picture shows the example image.",
+      "tags": [
+        "Display",
+        "Shopper"
+      ],
+      "route": "/",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-catalog-browser"
+      ],
+      "events": []
+    },
+    {
+      "id": "view-catalog-item-shopper",
+      "type": "view",
+      "name": "Catalog Item Detail",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-view-catalog-item",
+      "description": "Shopper-facing item detail read model. PictureUrl is /product-images/{itemId} when PictureFileName is set; otherwise the example image.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-updated",
+        "evt-catalog-item-price-changed",
+        "evt-catalog-item-restocked",
+        "evt-catalog-item-removed",
+        "evt-catalog-stock-deducted"
+      ],
+      "requiredPermissions": [
+        "catalog.viewItem"
+      ],
+      "state": [
+        {
+          "name": "ItemId",
+          "type": "guid",
+          "description": "Item id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Name",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "description": "Description",
+          "order": 3,
+          "required": false
+        },
+        {
+          "name": "Price",
+          "type": "decimal",
+          "description": "Price",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BrandName",
+          "type": "string",
+          "description": "Brand display name",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "TypeName",
+          "type": "string",
+          "description": "Type display name",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "AvailableStock",
+          "type": "integer",
+          "description": "Available stock",
+          "order": 7,
+          "required": true
+        },
+        {
+          "name": "PictureUrl",
+          "type": "string",
+          "description": "Picture URL for the storefront. When PictureFileName is a plain file name this is /product-images/{itemId}, which WebApp forwards to Catalog GET /api/catalog/items/{id}/pic. An empty PictureFileName uses the example image.",
+          "order": 8,
+          "required": false
+        },
+        {
+          "name": "IsAvailable",
+          "type": "boolean",
+          "description": "Whether item is listed and in stock",
+          "order": 9,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-catalog-item-shopper-display",
+      "type": "screen",
+      "name": "Item Detail",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-view-catalog-item",
+      "description": "Shopper item detail page. The picture img src is /product-images/{itemId} when the item has a PictureFileName; empty picture uses the example image. WebApp GET /product-images/{id} forwards to Catalog GET /api/catalog/items/{id}/pic. Browse, search, the item page and the cart use /product-images/{id} when the stored picture is a file name; an empty picture shows the example image.",
+      "tags": [
+        "Display",
+        "Shopper"
+      ],
+      "route": "/item/{itemId}",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-catalog-item-shopper"
+      ],
+      "events": []
+    },
+    {
+      "id": "view-catalog-search-results",
+      "type": "view",
+      "name": "Catalog Search Results",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-search-catalog",
+      "description": "Catalog items whose names start with the search text.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-catalog-item-added",
+        "evt-catalog-item-updated",
+        "evt-catalog-item-removed",
+        "evt-catalog-item-price-changed",
+        "evt-catalog-item-restocked",
+        "evt-catalog-stock-deducted"
+      ],
+      "requiredPermissions": [
+        "catalog.search"
+      ],
+      "state": [
+        {
+          "name": "Query",
+          "type": "string",
+          "description": "Search text (matched as a name prefix)",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Items",
+          "type": "array",
+          "description": "Item summaries whose names start with the search text (item id, name, description, price, picture URL, available stock, and IsAvailable: listed and in stock). Picture URL is /product-images/{itemId} when PictureFileName is set; empty picture uses the example image.",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "TotalItems",
+          "type": "integer",
+          "description": "Total matches",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-catalog-search-display",
+      "type": "screen",
+      "name": "Catalog Search",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-search-catalog",
+      "description": "Shopper search results display. Each result thumbnail uses /product-images/{itemId} when the summary carries a picture file name; empty picture uses the example image. WebApp GET /product-images/{id} forwards to Catalog GET /api/catalog/items/{id}/pic. Browse, search, the item page and the cart use /product-images/{id} when the stored picture is a file name; an empty picture shows the example image.",
+      "tags": [
+        "Display",
+        "Shopper"
+      ],
+      "route": "/catalog/search",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-catalog-search-results"
+      ],
+      "events": []
+    },
+    {
+      "id": "proc-auto-validate-order-stock",
+      "type": "process",
+      "name": "Route Awaiting Validation To Catalog",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-auto-validate-order-stock",
+      "description": "Subscribes to Ordering awaiting-validation signal; issues Validate Order Stock.",
+      "tags": [
+        "Automation",
+        "ForwardRef"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Validate Order Stock",
+          "description": "Pass order id and stock lines"
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-order-awaiting-validation"
+      ],
+      "issuesCommandId": "cmd-validate-order-stock"
+    },
+    {
+      "id": "proc-on-order-awaiting-validation",
+      "type": "process",
+      "name": "On Order Awaiting Validation",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Process trigger: Ordering marked order awaiting validation (wired via automation slice 1100 / integration event).",
+      "tags": [
+        "Trigger",
+        "Stock"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive awaiting-validation signal",
+          "description": "From Ordering / event bus"
+        }
+      ]
+    },
+    {
+      "id": "cmd-validate-order-stock",
+      "type": "command",
+      "name": "Validate Order Stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Checks AvailableStock for each order line; confirms or rejects the order stock check.",
+      "tags": [
+        "Catalog",
+        "Stock"
+      ],
+      "isAsync": true,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "catalog.stock.validate"
+      ],
+      "aggregateRootId": "entity-catalog-item",
+      "events": [
+        "evt-order-stock-confirmed",
+        "evt-order-stock-rejected"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order being validated",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderStockItems",
+          "type": "array",
+          "description": "Product id + units to validate",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-stock-confirmed",
+      "type": "event",
+      "name": "Order Stock Confirmed",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "All requested units are available for the order.",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Catalog",
+        "Stock"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When confirmed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-order-stock-rejected",
+      "type": "event",
+      "name": "Order Stock Rejected",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "One or more lines lack sufficient stock.",
+      "tags": [
+        "DomainEvent",
+        "IntegrationEvent",
+        "Catalog",
+        "Stock"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When rejected",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ConfirmedOrderStockItems",
+          "type": "array",
+          "description": "Per-line hasStock flags",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "gwt-validate-stock-confirmed",
+      "type": "gwt",
+      "name": "Stock available",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Given item in stock, when Validate Order Stock then Order Stock Confirmed.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-validate-order-stock",
+      "thenEvents": [
+        "evt-order-stock-confirmed"
+      ]
+    },
+    {
+      "id": "gwt-validate-stock-rejected",
+      "type": "gwt",
+      "name": "Insufficient stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Given item with insufficient stock, when Validate Order Stock then Order Stock Rejected.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-validate-order-stock",
+      "thenEvents": [
+        "evt-order-stock-rejected"
+      ]
+    },
+    {
+      "id": "error-order-stock-command-id-required",
+      "type": "error",
+      "name": "Order Stock Command Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Fires when the command id is empty. Message: \"Command identifier is required.\"",
+      "tags": [],
+      "errorCode": "ORDER_STOCK_COMMAND_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-stock-order-id-required",
+      "type": "error",
+      "name": "Order Stock Order Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Fires when the order id is empty. Message: \"Order id is required.\"",
+      "tags": [],
+      "errorCode": "ORDER_STOCK_ORDER_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-stock-items-required",
+      "type": "error",
+      "name": "Order Stock Items Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Fires when the order stock line list is missing or empty, or contains an empty line. Message: \"Order stock items are required.\"",
+      "tags": [],
+      "errorCode": "ORDER_STOCK_ITEMS_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-stock-product-id-required",
+      "type": "error",
+      "name": "Order Stock Product Id Required",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Fires when a line has an empty product id. Message: \"Product id is required.\"",
+      "tags": [],
+      "errorCode": "ORDER_STOCK_PRODUCT_ID_REQUIRED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-order-stock-units-invalid",
+      "type": "error",
+      "name": "Order Stock Units Invalid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-validate-order-stock",
+      "description": "Fires when a line asks for zero or fewer units. Message: \"Item units requested should be greater than zero.\"",
+      "tags": [],
+      "errorCode": "ORDER_STOCK_UNITS_INVALID",
+      "severity": "medium"
+    },
+    {
+      "id": "proc-auto-deduct-stock-on-paid",
+      "type": "process",
+      "name": "Route Order Paid To Catalog",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 220,
+      "height": 45,
+      "sliceId": "slice-auto-deduct-stock-on-paid",
+      "description": "Subscribes to Ordering paid signal; issues Deduct Catalog Stock.",
+      "tags": [
+        "Automation",
+        "ForwardRef"
+      ],
+      "stepItems": [
+        {
+          "name": "Issue Deduct Catalog Stock",
+          "description": "Pass order id and stock lines"
+        }
+      ],
+      "subscribedEventIds": [
+        "evt-order-paid"
+      ],
+      "issuesCommandId": "cmd-deduct-catalog-stock"
+    },
+    {
+      "id": "proc-on-order-paid",
+      "type": "process",
+      "name": "On Order Paid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-06T14:55:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Process trigger: order paid signal (wired via automation 1200).",
+      "tags": [
+        "Trigger",
+        "Stock"
+      ],
+      "stepItems": [
+        {
+          "name": "Receive order paid signal",
+          "description": "From Ordering / Payment path"
+        }
+      ]
+    },
+    {
+      "id": "cmd-deduct-catalog-stock",
+      "type": "command",
+      "name": "Deduct Catalog Stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:35:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Deducts stock for each paid order line. Each line removes the smaller of the requested units and the available stock, so stock never goes below 0. Units must be greater than zero. Available stock already at 0 is rejected.",
+      "tags": [
+        "Catalog",
+        "Stock"
+      ],
+      "isAsync": true,
+      "handler": "CatalogCommandHandler",
+      "triggerSources": [
+        "System Process"
+      ],
+      "requiredPermissions": [
+        "catalog.stock.deduct"
+      ],
+      "aggregateRootId": "entity-catalog-item",
+      "events": [
+        "evt-catalog-stock-deducted"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Paid order id",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderStockItems",
+          "type": "array",
+          "description": "Product id + units to deduct (units > 0)",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-catalog-stock-deducted",
+      "type": "event",
+      "name": "Catalog Stock Deducted",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:35:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Stock units were removed after a paid order. A line can remove fewer units than requested when stock runs short (take what's left).",
+      "tags": [
+        "DomainEvent",
+        "Catalog",
+        "Stock"
+      ],
+      "eventType": "Domain Event",
+      "source": "Catalog Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When deducted",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Deductions",
+          "type": "array",
+          "description": "Item id + units actually removed (ItemId, UnitsRemoved). UnitsRemoved can be less than requested. The requested units are not recorded; the original RemoveStock only returns the removed count.",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "error-insufficient-stock-on-deduct",
+      "type": "error",
+      "name": "Catalog Item Out Of Stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:35:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Available stock is already 0 (the original RemoveStock throws \"Empty stock, product item ... is sold out\"). Used only for zero stock: short stock deducts what's left instead.",
+      "tags": [],
+      "errorCode": "CATALOG_ITEM_OUT_OF_STOCK",
+      "severity": "high"
+    },
+    {
+      "id": "gwt-deduct-stock-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:35:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Given item with enough stock, when Deduct Catalog Stock then Catalog Stock Deducted with UnitsRemoved equal to the requested units.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-deduct-catalog-stock",
+      "thenEvents": [
+        "evt-catalog-stock-deducted"
+      ]
+    },
+    {
+      "id": "gwt-deduct-stock-sold-out",
+      "type": "gwt",
+      "name": "Sold out",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Given empty stock, when Deduct Catalog Stock then Catalog Item Out Of Stock.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-deduct-catalog-stock",
+      "thenEvents": [],
+      "thenErrorId": "error-insufficient-stock-on-deduct"
+    },
+    {
+      "id": "gwt-deduct-stock-short",
+      "type": "gwt",
+      "name": "Short stock",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T14:35:00Z",
+      "lastUpdated": "2026-10-08T14:35:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-deduct-catalog-stock",
+      "description": "Given item with less stock than requested (e.g. 2 available, 5 requested), when Deduct Catalog Stock then Catalog Stock Deducted with UnitsRemoved = 2 and available stock 0.",
+      "tags": [
+        "TestCase",
+        "EdgeCase"
+      ],
+      "givenEvents": [
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-deduct-catalog-stock",
+      "thenEvents": [
+        "evt-catalog-stock-deducted"
+      ]
+    },
+    {
+      "id": "evt-order-awaiting-validation",
+      "type": "event",
+      "name": "Order Awaiting Validation (from Ordering)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-ordering-signals-catalog",
+      "description": "Local mirror of Ordering evt-order-awaiting-validation for automation subscription resolution. Producer lives in Ordering workspace.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Ordering"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "eventType": "Integration Event",
+      "source": "Ordering Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When marked",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderStockItems",
+          "type": "array",
+          "description": "Product id + units to validate",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-order-paid",
+      "type": "event",
+      "name": "Order Paid (from Ordering)",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 45,
+      "selected": false,
+      "complexityScore": 1,
+      "sliceId": "slice-inbound-ordering-signals-catalog",
+      "description": "Local mirror of Ordering evt-order-paid for automation subscription resolution. Producer lives in Ordering workspace.",
+      "tags": [
+        "IntegrationMirror",
+        "Inbound",
+        "ImportFix",
+        "Ordering"
+      ],
+      "dateCreated": "2026-10-06T17:15:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "eventType": "Integration Event",
+      "source": "Ordering Service (integration mirror)",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When paid",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "OrderId",
+          "type": "guid",
+          "description": "Order id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "OrderStockItems",
+          "type": "array",
+          "description": "Product id + units to deduct",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "BuyerId",
+          "type": "guid",
+          "description": "Buyer id",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "proc-hold-slice-inbound-ordering-signals-catalog",
+      "type": "process",
+      "name": "Hold Integration Mirrors",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-06T18:25:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-inbound-ordering-signals-catalog",
+      "description": "Process trigger for the import-mirror holder slice. These events exist so automation subscribedEventIds resolve locally; they are not business emissions of Catalog/Basket/Payment/Ordering command slices.",
+      "tags": [
+        "Trigger",
+        "ImportFix"
+      ],
+      "stepItems": [
+        {
+          "name": "Resolve cross-workspace subscriptions",
+          "description": "Local mirror widgets only"
+        }
+      ]
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-08T02:45:00Z",
+      "width": 200,
+      "height": 45,
+      "tags": [],
+      "id": "view-catalog-brands-and-types",
+      "name": "Catalog Brands And Types",
+      "sliceId": "slice-catalog-brands-and-types",
+      "description": "Lists every catalog brand and type with its display name, for the storefront filter lists and for API clients that add or update catalog items.",
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-catalog-brand-defined",
+        "evt-catalog-type-defined"
+      ],
+      "requiredPermissions": [
+        "catalog.browse"
+      ],
+      "state": [
+        {
+          "name": "Brands",
+          "type": "array",
+          "description": "Brand id + brand name pairs",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Types",
+          "type": "array",
+          "description": "Type id + type name pairs",
+          "order": 2,
+          "required": true
+        }
+      ],
+      "type": "view"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 44,
+      "tags": [
+        "Display",
+        "Shopper"
+      ],
+      "id": "screen-catalog-brands-and-types-display",
+      "name": "Catalog Filter Lists",
+      "sliceId": "slice-catalog-brands-and-types",
+      "description": "Brand and type filter lists on the Catalog page (names, not ids).",
+      "route": "/catalog",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-catalog-brands-and-types"
+      ],
+      "events": [],
+      "type": "screen"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 200,
+      "height": 45,
+      "tags": [],
+      "id": "error-catalog-item-already-exists",
+      "name": "Catalog Item Already Exists",
+      "sliceId": "slice-add-catalog-item",
+      "description": "An item with this item id was already added. Add Catalog Item rejects the duplicate; re-running the seed must check first.",
+      "errorCode": "CATALOG_ITEM_ALREADY_EXISTS",
+      "severity": "medium",
+      "type": "error"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "width": 280,
+      "height": 180,
+      "tags": [
+        "TestCase",
+        "Error"
+      ],
+      "id": "gwt-add-item-duplicate",
+      "name": "Duplicate item id",
+      "sliceId": "slice-add-catalog-item",
+      "description": "Given Catalog Item Added for this item id, when Add Catalog Item with the same item id, then reject with Catalog Item Already Exists.",
+      "givenEvents": [
+        "evt-catalog-brand-defined",
+        "evt-catalog-type-defined",
+        "evt-catalog-item-added"
+      ],
+      "whenCommandId": "cmd-add-catalog-item",
+      "thenEvents": [],
+      "thenErrorId": "error-catalog-item-already-exists",
+      "type": "gwt"
+    }
+  ],
+  "swimlanes": [
+    {
+      "id": "slice-define-catalog-brand",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Define Catalog Brand",
+      "description": "Backoffice creates a catalog brand. CRUD gap: eShop only seeds brands and exposes GET /api/catalog/catalogbrands.",
+      "position": 200,
+      "width": 400,
+      "height": 520,
+      "order": 100,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Catalog",
+        "Backoffice",
+        "CRUD-gap"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-define-catalog-brand"
+      ],
+      "events": [
+        "evt-catalog-brand-defined"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-brand"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [
+        "gwt-define-brand-happy"
+      ]
+    },
+    {
+      "id": "slice-define-catalog-type",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Define Catalog Type",
+      "description": "Backoffice creates a catalog type/category. CRUD gap: eShop only seeds types and exposes GET /api/catalog/catalogtypes.",
+      "position": 628,
+      "width": 400,
+      "height": 520,
+      "order": 200,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Catalog",
+        "Backoffice",
+        "CRUD-gap"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-define-catalog-type"
+      ],
+      "events": [
+        "evt-catalog-type-defined"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-type"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [
+        "gwt-define-type-happy"
+      ]
+    },
+    {
+      "id": "slice-add-catalog-item",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Add Catalog Item",
+      "description": "Backoffice adds a sellable catalog item. Maps to POST /api/catalog/items.",
+      "position": 1056,
+      "width": 400,
+      "height": 520,
+      "order": 300,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 8,
+      "tags": [
+        "Catalog",
+        "Backoffice"
+      ],
+      "dependencies": [
+        "slice-define-catalog-brand",
+        "slice-define-catalog-type"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T02:45:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-add-catalog-item"
+      ],
+      "events": [
+        "evt-catalog-item-added"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item",
+        "entity-catalog-brand",
+        "entity-catalog-type"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [
+        "error-catalog-item-already-exists"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-add-item-happy",
+        "gwt-add-item-duplicate"
+      ]
+    },
+    {
+      "id": "slice-catalog-item-detail-admin",
+      "type": "vertical",
+      "sliceKind": "state-view",
+      "name": "Catalog Item Detail (admin)",
+      "description": "Admin read model for a single catalog item after add/update/restock/deduct, and after removal (Removed set; final soft delete).",
+      "position": 1484,
+      "width": 400,
+      "height": 520,
+      "order": 400,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Catalog",
+        "Backoffice",
+        "StateView"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [],
+      "views": [
+        "view-catalog-item-admin"
+      ],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-update-catalog-item",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Update Catalog Item",
+      "description": "Backoffice updates item fields. When price changes, also emits Catalog Item Price Changed (eShop ProductPriceChangedIntegrationEvent).",
+      "position": 1912,
+      "width": 400,
+      "height": 520,
+      "order": 500,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 8,
+      "tags": [
+        "Catalog",
+        "Backoffice"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-update-catalog-item"
+      ],
+      "events": [
+        "evt-catalog-item-updated",
+        "evt-catalog-item-price-changed"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [
+        "error-catalog-item-not-found-on-update"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-update-item-happy",
+        "gwt-update-item-price-changed",
+        "gwt-update-removed-item"
+      ]
+    },
+    {
+      "id": "slice-remove-catalog-item",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Remove Catalog Item",
+      "description": "Catalog admin removes a catalog item from sale (API only). Removal is a final soft delete. Catalog Item Removed sets Exists to false and Removed to true; the item stream stays. Add Catalog Item rejects a removed item id with CATALOG_ITEM_ALREADY_EXISTS, and Update, Remove and Restock reject it with CATALOG_ITEM_NOT_FOUND. Shopper views drop the item; the admin view keeps it with Removed set. eShop's DELETE is a hard delete.",
+      "position": 2340,
+      "width": 400,
+      "height": 520,
+      "order": 600,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Catalog",
+        "Backoffice"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-remove-catalog-item"
+      ],
+      "events": [
+        "evt-catalog-item-removed"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [
+        "error-catalog-item-not-found-on-remove"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-remove-item-happy",
+        "gwt-remove-removed-item"
+      ]
+    },
+    {
+      "id": "slice-restock-catalog-item",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Restock Catalog Item",
+      "description": "Increments available stock (domain AddStock). CRUD/domain gap: no dedicated public restock API in eShop Catalog.API.",
+      "position": 2768,
+      "width": 400,
+      "height": 520,
+      "order": 700,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "tags": [
+        "Catalog",
+        "Backoffice",
+        "CRUD-gap",
+        "Stock"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-restock-catalog-item"
+      ],
+      "events": [
+        "evt-catalog-item-restocked"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [
+        "error-catalog-item-not-found-on-restock"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-restock-happy",
+        "gwt-restock-removed-item"
+      ]
+    },
+    {
+      "id": "slice-browse-catalog",
+      "type": "vertical",
+      "sliceKind": "state-view",
+      "name": "Browse Catalog",
+      "description": "Shopper catalog list with brand/type facets and filters (WebApp Catalog page / GET items + facets).",
+      "position": 3624,
+      "width": 400,
+      "height": 520,
+      "order": 800,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 8,
+      "tags": [
+        "Catalog",
+        "Shopper",
+        "StateView"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item",
+        "slice-define-catalog-brand",
+        "slice-define-catalog-type",
+        "slice-catalog-brands-and-types"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [],
+      "views": [
+        "view-catalog-browser"
+      ],
+      "screens": [
+        "screen-browse-catalog-display"
+      ],
+      "entities": [
+        "entity-catalog-item",
+        "entity-catalog-brand",
+        "entity-catalog-type"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-view-catalog-item",
+      "type": "vertical",
+      "sliceKind": "state-view",
+      "name": "View Catalog Item",
+      "description": "Shopper item detail including picture. Catalog serves the item picture at GET /api/catalog/items/{id}/pic, where {id} is the catalog item id (mirrors eShop GetItemPictureById). It reads the item's PictureFileName and returns the image file (content types image/webp, image/jpeg, image/png, image/gif, image/bmp, image/tiff, image/wmf, image/jp2, image/svg+xml). It returns 404 when the item is unknown or removed, the file is missing, or PictureFileName is not a single plain file name. The storefront page at /item/{itemId} loads the image through WebApp GET /product-images/{id}, which forwards to Catalog GET /api/catalog/items/{id}/pic. Browse, search, the item page and the cart use /product-images/{id} when the stored picture is a file name; an empty picture shows the example image.",
+      "position": 4052,
+      "width": 400,
+      "height": 520,
+      "order": 900,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Catalog",
+        "Shopper",
+        "StateView"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [],
+      "views": [
+        "view-catalog-item-shopper"
+      ],
+      "screens": [
+        "screen-catalog-item-shopper-display"
+      ],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-search-catalog",
+      "type": "vertical",
+      "sliceKind": "state-view",
+      "name": "Search Catalog",
+      "description": "Plain name-prefix search: matches catalog items whose names start with the query text (upstream Catalog.API name filter).",
+      "position": 4480,
+      "width": 400,
+      "height": 520,
+      "order": 1000,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 8,
+      "tags": [
+        "Catalog",
+        "Shopper",
+        "StateView"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [],
+      "views": [
+        "view-catalog-search-results"
+      ],
+      "screens": [
+        "screen-catalog-search-display"
+      ],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-inbound-ordering-signals-catalog",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Inbound Ordering Signals (mirrors)",
+      "description": "Import-only holder for Ordering event mirrors so Catalog automations can resolve subscribedEventIds in-document. These are NOT emitted by Validate/Deduct command slices. Do not treat the Events zone here as Catalog domain emissions. Modeling scaffolding only, no code; real delivery is the producing context's integration event over the bus.",
+      "position": 4908,
+      "width": 400,
+      "height": 520,
+      "order": 1085,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 2,
+      "tags": [
+        "IntegrationMirror",
+        "ImportFix",
+        "Inbound"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T18:25:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [
+        "evt-order-awaiting-validation",
+        "evt-order-paid"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-hold-slice-inbound-ordering-signals-catalog"
+      ],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-auto-validate-order-stock",
+      "type": "vertical",
+      "sliceKind": "automation",
+      "name": "When Order Awaiting Validation Validate Stock",
+      "description": "Automation: Ordering Order Awaiting Validation → issues Validate Order Stock. Forward-ref event id owned by Ordering workspace later.",
+      "position": 5336,
+      "width": 400,
+      "height": 420,
+      "order": 1100,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Catalog",
+        "Automation",
+        "Stock",
+        "ForwardRef"
+      ],
+      "dependencies": [
+        "slice-validate-order-stock"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-auto-validate-order-stock"
+      ],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-validate-order-stock",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Validate Order Stock",
+      "description": "Catalog checks availability for order lines. One command with branching outcomes (Confirmed vs Rejected), preferred over two separate commands. Maps to AwaitingValidation handler.",
+      "position": 5764,
+      "width": 400,
+      "height": 520,
+      "order": 1110,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 3,
+      "effortEstimate": 10,
+      "tags": [
+        "Catalog",
+        "Stock",
+        "Ordering"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-validate-order-stock"
+      ],
+      "events": [
+        "evt-order-stock-confirmed",
+        "evt-order-stock-rejected"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [
+        "proc-on-order-awaiting-validation"
+      ],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [
+        "error-order-stock-command-id-required",
+        "error-order-stock-order-id-required",
+        "error-order-stock-items-required",
+        "error-order-stock-product-id-required",
+        "error-order-stock-units-invalid"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-validate-stock-confirmed",
+        "gwt-validate-stock-rejected"
+      ]
+    },
+    {
+      "id": "slice-auto-deduct-stock-on-paid",
+      "type": "vertical",
+      "sliceKind": "automation",
+      "name": "When Order Paid Deduct Stock",
+      "description": "Automation: Ordering Order Paid → issues Deduct Catalog Stock. Forward-ref event id owned by Ordering later.",
+      "position": 6192,
+      "width": 400,
+      "height": 420,
+      "order": 1200,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Catalog",
+        "Automation",
+        "Stock",
+        "ForwardRef"
+      ],
+      "dependencies": [
+        "slice-deduct-catalog-stock"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:16:00Z",
+      "boundedContext": "Catalog",
+      "commands": [],
+      "events": [],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "processes": [
+        "proc-auto-deduct-stock-on-paid"
+      ],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-deduct-catalog-stock",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Deduct Catalog Stock",
+      "description": "Removes units from AvailableStock after payment (eShop OrderStatusChangedToPaid handler RemoveStock). Takes what's left: each line removes the smaller of the requested units and the available stock, and Catalog Stock Deducted records the units actually removed. Rejects only when available stock is already 0 (CATALOG_ITEM_OUT_OF_STOCK) or the quantity is zero or less, as the original RemoveStock does. A product id that is not in the catalog is skipped, as the original Paid handler does (catalogItem?.RemoveStock). This matches the original eShop: take what's left.",
+      "position": 6620,
+      "width": 400,
+      "height": 520,
+      "order": 1210,
+      "actorRoleId": "role-catalog-admin",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "tags": [
+        "Catalog",
+        "Stock",
+        "Ordering"
+      ],
+      "dependencies": [
+        "slice-add-catalog-item"
+      ],
+      "dateCreated": "2026-10-06T14:55:00Z",
+      "lastUpdated": "2026-10-08T14:35:00Z",
+      "boundedContext": "Catalog",
+      "commands": [
+        "cmd-deduct-catalog-stock"
+      ],
+      "events": [
+        "evt-catalog-stock-deducted"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [
+        "entity-catalog-item"
+      ],
+      "processes": [
+        "proc-on-order-paid"
+      ],
+      "roles": [
+        "role-catalog-admin"
+      ],
+      "questions": [],
+      "errors": [
+        "error-insufficient-stock-on-deduct"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-deduct-stock-happy",
+        "gwt-deduct-stock-sold-out",
+        "gwt-deduct-stock-short"
+      ]
+    },
+    {
+      "type": "vertical",
+      "width": 400,
+      "height": 520,
+      "status": "Planned",
+      "dateCreated": "2026-10-07T21:05:00Z",
+      "lastUpdated": "2026-10-07T21:05:00Z",
+      "views": [
+        "view-catalog-brands-and-types"
+      ],
+      "screens": [
+        "screen-catalog-brands-and-types-display"
+      ],
+      "processes": [],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [],
+      "commands": [],
+      "events": [],
+      "entities": [
+        "entity-catalog-brand",
+        "entity-catalog-type"
+      ],
+      "roles": [
+        "role-shopper"
+      ],
+      "dependencies": [
+        "slice-define-catalog-brand",
+        "slice-define-catalog-type"
+      ],
+      "tags": [
+        "Catalog",
+        "Shopper",
+        "StateView"
+      ],
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "id": "slice-catalog-brands-and-types",
+      "sliceKind": "state-view",
+      "name": "Catalog Brands And Types",
+      "order": 750,
+      "description": "Read model of brand and type names. Browse Catalog facets carry only ids and counts, so filter lists read names from here (upstream GET /api/catalog/catalogbrands and /catalogtypes).",
+      "actorRoleId": "role-shopper",
+      "boundedContext": "Catalog",
+      "position": 3196
+    }
+  ],
+  "groups": [],
+  "connections": [],
+  "sequenceLayout": {
+    "mode": "structured",
+    "actorLanes": [],
+    "eventAssignments": {},
+    "eventSequence": [],
+    "options": {
+      "fixedLaneHeight": 120
+    }
+  }
+}

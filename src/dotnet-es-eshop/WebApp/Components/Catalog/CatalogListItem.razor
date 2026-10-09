@@ -1,0 +1,21 @@
+﻿@using System.Globalization
+@inject IProductImageUrlProvider ProductImages
+
+<div class="catalog-item"
+     data-sort-name="@Item.Name"
+     data-sort-price="@Item.Price.ToString(CultureInfo.InvariantCulture)">
+    <a class="catalog-product" href="/item/@(Item.ItemId.ToString("D"))" data-enhance-nav="false">
+        <span class='catalog-product-image'>
+            <img alt="@Item.Name" src='@ProductImages.GetProductImageUrl(Item.ItemId, Item.PictureUrl)' />
+        </span>
+        <span class='catalog-product-content'>
+            <span class='name'>@Item.Name</span>
+            <span class='price'>$@Item.Price.ToPriceDisplay()</span>
+        </span>
+    </a>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required BrowseCatalogItem Item { get; set; }
+}

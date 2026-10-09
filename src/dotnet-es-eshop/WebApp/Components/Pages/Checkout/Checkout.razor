@@ -1,0 +1,228 @@
+﻿@page "/checkout"
+@using System.Text.Json
+@using LawnDart.Samples.EShop.WebApp.Services
+@implements IDisposable
+@inject ICheckout CheckoutForm
+@inject ShopperSession Shopper
+@inject NavigationManager Nav
+@inject IHttpContextAccessor Http
+
+<PageTitle>Checkout | AdventureWorks</PageTitle>
+<SectionContent SectionName="page-header-title">Checkout</SectionContent>
+
+@if (sessionEnded)
+{
+    <p><a href="/user/login">Sign in</a></p>
+}
+<div class='checkout'>
+    @if (orderingUnavailable)
+    {
+        <p role="status">Ordering is temporarily unavailable.</p>
+    }
+    else if (!string.IsNullOrEmpty(orderMessage))
+    {
+        <p role="status">@orderMessage</p>
+    }
+    @if (editContext is not null)
+    {
+    <EditForm EditContext="@editContext" FormName="checkout" OnSubmit="@HandleSubmitAsync" Enhance>
+        <DataAnnotationsValidator />
+        <div class="form">
+            <div class="form-section">
+                <h2>Shipping address</h2>
+                <label>
+                    Address
+                    <InputText @bind-Value="@Info.Street" />
+                    <ValidationMessage For="@(() => Info.Street)" />
+                </label>
+                <div class="form-group">
+                    <div class="form-group-item">
+                        <label>
+                            City
+                            <InputText @bind-Value="@Info.City" />
+                            <ValidationMessage For="@(() => Info.City)" />
+                        </label>
+                    </div>
+                    <div class="form-group-item">
+                        <label>
+                            State
+                            <InputText @bind-Value="@Info.State" />
+                            <ValidationMessage For="@(() => Info.State)" />
+                        </label>
+                    </div>
+                    <div class="form-group-item">
+                        <label>
+                            Zip code
+                            <InputText @bind-Value="@Info.ZipCode" />
+                            <ValidationMessage For="@(() => Info.ZipCode)" />
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label>
+                        Country
+                        <InputText @bind-Value="@Info.Country" />
+                        <ValidationMessage For="@(() => Info.Country)" />
+                    </label>
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-buttons">
+                    <a href="cart" class="button button-secondary"><img role="presentation" src="icons/arrow-left.svg" />Back to the shopping bag</a>
+                    <input type="hidden" name="Info.RequestId" value="@Info.RequestId" />
+                    <button class="button button-primary" type="submit">Place order</button>
+                </div>
+            </div>
+        </div>
+        <ValidationSummary />
+    </EditForm>
+    }
+</div>
+
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private EditContext? editContext;
+    private ValidationMessageStore extraMessages = default!;
+    private string? orderMessage;
+    private bool orderingUnavailable;
+    private bool sessionEnded;
+
+    [SupplyParameterFromForm]
+    public BasketCheckoutInfo Info { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ShopperPages.RedirectIfSignedOut(Shopper, Nav))
+            return;
+
+        if (Info is null)
+        {
+            try
+            {
+                Info = await CheckoutForm.GetShippingAddressAsync();
+            }
+            catch (ShopperSessionEndedException)
+            {
+                sessionEnded = true;
+                ShopperPages.SendToLogin(Nav, Http.HttpContext);
+                return;
+            }
+        }
+
+        if (Info.RequestId == Guid.Empty)
+            Info.RequestId = Guid.NewGuid();
+
+        editContext = new EditContext(Info!);
+        extraMessages = new ValidationMessageStore(editContext);
+    }
+
+    public void Dispose()
+    {
+        _lifetime.Cancel();
+        _lifetime.Dispose();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        if (editContext is null)
+            return;
+
+        orderMessage = null;
+        orderingUnavailable = false;
+        await PerformCustomValidationAsync();
+
+        if (editContext.Validate())
+            await HandleValidSubmitAsync();
+    }
+
+    private async Task HandleValidSubmitAsync()
+    {
+        Info.CardTypeId = 1;
+        if (Info.RequestId == Guid.Empty)
+            Info.RequestId = Guid.NewGuid();
+
+        var cancellationToken = _lifetime.Token;
+        try
+        {
+            await CheckoutForm.PlaceOrderAsync(Info, cancellationToken);
+            Nav.NavigateTo($"user/orders?placed={Info.RequestId:D}");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OrderingCommandRejectedException rejected)
+        {
+            orderMessage = rejected.Message;
+        }
+        catch (ShopperSessionEndedException)
+        {
+            sessionEnded = true;
+            ShopperPages.SendToLogin(Nav, Http.HttpContext);
+            return;
+        }
+        catch (HttpRequestException)
+        {
+            orderingUnavailable = true;
+        }
+        catch (NotSupportedException)
+        {
+            orderingUnavailable = true;
+        }
+        catch (JsonException)
+        {
+            orderingUnavailable = true;
+        }
+        catch (TaskCanceledException)
+        {
+            orderingUnavailable = true;
+        }
+    }
+
+    private async Task PerformCustomValidationAsync()
+    {
+        extraMessages.Clear();
+
+        IReadOnlyCollection<BasketItem> items;
+        var cancellationToken = _lifetime.Token;
+        try
+        {
+            items = await CheckoutForm.GetBasketItemsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (ShopperSessionEndedException)
+        {
+            sessionEnded = true;
+            ShopperPages.SendToLogin(Nav, Http.HttpContext);
+            return;
+        }
+        catch (HttpRequestException)
+        {
+            extraMessages.Add(new FieldIdentifier(Info, ""), "Basket is temporarily unavailable.");
+            return;
+        }
+        catch (NotSupportedException)
+        {
+            extraMessages.Add(new FieldIdentifier(Info, ""), "Basket is temporarily unavailable.");
+            return;
+        }
+        catch (JsonException)
+        {
+            extraMessages.Add(new FieldIdentifier(Info, ""), "Basket is temporarily unavailable.");
+            return;
+        }
+        catch (TaskCanceledException)
+        {
+            extraMessages.Add(new FieldIdentifier(Info, ""), "Basket is temporarily unavailable.");
+            return;
+        }
+
+        if (items.Count == 0)
+        {
+            extraMessages.Add(new FieldIdentifier(Info, ""), "Your cart is empty.");
+        }
+    }
+}

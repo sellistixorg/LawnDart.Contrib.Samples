@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LawnDart.Samples.EShop.Shared</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LawnDart" />
+    <PackageReference Include="LawnDart.EventSourcing" />
+  </ItemGroup>
+</Project>

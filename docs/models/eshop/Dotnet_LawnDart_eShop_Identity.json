@@ -1,0 +1,1856 @@
+{
+  "id": "dotnet-lawndart-eshop-identity",
+  "name": "dotnet LawnDart eShop Identity",
+  "description": "Identity / account bounded context for a LawnDart-style rewrite of Microsoft eShop. Built on ASP.NET Identity only, no Duende; upstream eShop uses Duende IdentityServer + ASP.NET Identity. Business process first. Register is a LawnDart addition (eShop only seeds users). Seeded demo card fields (card holder, masked card number, card type, expiration and security number) live only on the ASP.NET Identity login record in SQL, like eShop's ApplicationUser, and never in events. Key-deletion encryption of those fields is a later LawnDart item.",
+  "tags": [
+    "eShop",
+    "LawnDart",
+    "Identity",
+    "dotnet"
+  ],
+  "projectName": "dotnet ES eShop",
+  "lastModified": 1791487980000,
+  "settings": {
+    "hoursPerPoint": 2,
+    "complexityMultiplier": 1.5,
+    "defaultWidgetComplexity": 1
+  },
+  "enumerations": [],
+  "ruleSets": [],
+  "widgets": [
+    {
+      "id": "role-shopper",
+      "type": "role",
+      "name": "Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 120,
+      "height": 69,
+      "description": "A customer who registers, signs in, and shops the catalog.",
+      "tags": [
+        "Role",
+        "Shopper"
+      ],
+      "permissions": [
+        "account.register",
+        "account.signIn",
+        "account.signOut",
+        "account.updateProfile",
+        "account.consent"
+      ],
+      "level": "User"
+    },
+    {
+      "id": "entity-shopper-account",
+      "type": "entity",
+      "name": "Shopper Account",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 140,
+      "height": 45,
+      "entityType": "AggregateRoot",
+      "isAggregateRoot": true,
+      "description": "Aggregate root for a shopper identity account (maps to ASP.NET Identity ApplicationUser in eShop Identity.API). Stream key: shopper-account:{accountId}",
+      "tags": [
+        "AggregateRoot",
+        "Identity"
+      ],
+      "state": [
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Unique account identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Login user name",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Email",
+          "type": "string",
+          "description": "Email address",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Given name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "LastName",
+          "type": "string",
+          "description": "Family name",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Default shipping street",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "Default shipping city",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "Default shipping state",
+          "order": 8,
+          "required": false
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Default shipping country",
+          "order": 9,
+          "required": false
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Default shipping postal code",
+          "order": 10,
+          "required": false
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "string",
+          "description": "Contact phone",
+          "order": 11,
+          "required": false
+        },
+        {
+          "name": "IsActive",
+          "type": "boolean",
+          "description": "Whether the account can sign in",
+          "order": 12,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "cmd-register-shopper-account",
+      "type": "command",
+      "name": "Register Shopper Account",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Creates a new shopper account with credentials and basic profile. Produces Shopper Account Registered. The password is hashed into the ASP.NET Identity login store and never goes on events.",
+      "tags": [
+        "Identity"
+      ],
+      "isAsync": false,
+      "handler": "ShopperAccountCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "account.register"
+      ],
+      "aggregateRootId": "entity-shopper-account",
+      "events": [
+        "evt-shopper-account-registered"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Identifier to assign to the new account",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Desired login name",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Email",
+          "type": "string",
+          "description": "Email address",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Password",
+          "type": "string",
+          "description": "Chosen password (never store on events)",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Given name",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "LastName",
+          "type": "string",
+          "description": "Family name",
+          "order": 7,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evt-shopper-account-registered",
+      "type": "event",
+      "name": "Shopper Account Registered",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-register-shopper-account",
+      "description": "A shopper account was created. Tagged: shopper-account:{accountId}",
+      "tags": [
+        "DomainEvent",
+        "Identity"
+      ],
+      "eventType": "Domain Event",
+      "source": "Identity Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When registration completed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "New account id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Login name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Email",
+          "type": "string",
+          "description": "Email address",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Given name",
+          "order": 6,
+          "required": true
+        },
+        {
+          "name": "LastName",
+          "type": "string",
+          "description": "Family name",
+          "order": 7,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-register-shopper",
+      "type": "screen",
+      "name": "Register",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Self-service registration form (LawnDart addition; stock eShop AccountController has no Register action).",
+      "tags": [
+        "Trigger"
+      ],
+      "route": "/account/register",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-register-shopper-account"
+      ]
+    },
+    {
+      "id": "error-email-already-registered",
+      "type": "error",
+      "name": "Email Already Registered",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-register-shopper-account",
+      "description": "An account with this email already exists (email compared trimmed, case-insensitive). A taken user name is User Name Already Registered.",
+      "tags": [],
+      "errorCode": "EMAIL_ALREADY_REGISTERED",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-register-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Given no prior account, when Register Shopper Account then Shopper Account Registered.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-register-shopper-account",
+      "thenEvents": [
+        "evt-shopper-account-registered"
+      ]
+    },
+    {
+      "id": "gwt-register-duplicate-email",
+      "type": "gwt",
+      "name": "Duplicate email",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Given an account already registered with the same email, when Register Shopper Account then Email Already Registered.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-account-registered"
+      ],
+      "whenCommandId": "cmd-register-shopper-account",
+      "thenEvents": [],
+      "thenErrorId": "error-email-already-registered"
+    },
+    {
+      "id": "error-user-name-already-registered",
+      "type": "error",
+      "name": "User Name Already Registered",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Fires when an ASP.NET Identity login with this user name already exists: checked before the account is reserved (FindByNameAsync), and again as DuplicateUserName when the login user is created. Message: \"An account with this user name already exists.\"",
+      "tags": [],
+      "errorCode": "USER_NAME_ALREADY_REGISTERED",
+      "severity": "medium"
+    },
+    {
+      "id": "error-user-name-invalid",
+      "type": "error",
+      "name": "User Name Invalid",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Fires when the ASP.NET Identity user validator rejects the user name (InvalidUserName), e.g. a character outside the default allowed set of letters, digits and -._@+. Message: \"User name is invalid.\"",
+      "tags": [],
+      "errorCode": "USER_NAME_INVALID",
+      "severity": "medium"
+    },
+    {
+      "id": "error-password-requirements-not-met",
+      "type": "error",
+      "name": "Password Requirements Not Met",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Fires when an ASP.NET Identity password validator rejects the password. The default rules apply: at least 6 characters, with a digit, a lowercase letter, an uppercase letter and a non-alphanumeric character. The message lists the rules that failed.",
+      "tags": [],
+      "errorCode": "PASSWORD_REQUIREMENTS_NOT_MET",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-register-duplicate-user-name",
+      "type": "gwt",
+      "name": "Duplicate user name",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Given an account already registered with the same user name, when Register Shopper Account then User Name Already Registered.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-account-registered"
+      ],
+      "whenCommandId": "cmd-register-shopper-account",
+      "thenEvents": [],
+      "thenErrorId": "error-user-name-already-registered"
+    },
+    {
+      "id": "gwt-register-invalid-user-name",
+      "type": "gwt",
+      "name": "Invalid user name",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Given no prior account, when Register Shopper Account with a user name containing a space then User Name Invalid.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-register-shopper-account",
+      "thenEvents": [],
+      "thenErrorId": "error-user-name-invalid"
+    },
+    {
+      "id": "gwt-register-weak-password",
+      "type": "gwt",
+      "name": "Weak password",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-register-shopper-account",
+      "description": "Given no prior account, when Register Shopper Account with password \"abc\" then Password Requirements Not Met.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-register-shopper-account",
+      "thenEvents": [],
+      "thenErrorId": "error-password-requirements-not-met"
+    },
+    {
+      "id": "view-shopper-account-profile",
+      "type": "view",
+      "name": "Shopper Account Profile",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-shopper-account-profile",
+      "description": "Projection of shopper account identity and default address fields. No payment-card fields.",
+      "tags": [],
+      "template": "",
+      "dataSource": "",
+      "events": [
+        "evt-shopper-account-registered",
+        "evt-shopper-profile-updated"
+      ],
+      "requiredPermissions": [
+        "account.updateProfile"
+      ],
+      "state": [
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Account id",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Login name",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Email",
+          "type": "string",
+          "description": "Email",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Given name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "LastName",
+          "type": "string",
+          "description": "Family name",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Street",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "City",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "State",
+          "order": 8,
+          "required": false
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Country",
+          "order": 9,
+          "required": false
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Postal code",
+          "order": 10,
+          "required": false
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "string",
+          "description": "Phone",
+          "order": 11,
+          "required": false
+        },
+        {
+          "name": "IsActive",
+          "type": "boolean",
+          "description": "Active flag",
+          "order": 12,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-shopper-account-profile-display",
+      "type": "screen",
+      "name": "Account Profile",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-shopper-account-profile",
+      "description": "Display of Shopper Account Profile read model.",
+      "tags": [
+        "Display"
+      ],
+      "route": "/account/profile",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "display",
+      "viewIds": [
+        "view-shopper-account-profile"
+      ],
+      "events": []
+    },
+    {
+      "id": "cmd-sign-in-shopper",
+      "type": "command",
+      "name": "Sign In Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-sign-in-shopper",
+      "description": "Checks the password against the ASP.NET Identity login store and appends Shopper Signed In. Issues no cookie or Duende token.",
+      "tags": [
+        "Identity",
+        "ASP.NET Identity"
+      ],
+      "isAsync": false,
+      "handler": "ShopperAccountCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "account.signIn"
+      ],
+      "aggregateRootId": "entity-shopper-account",
+      "events": [
+        "evt-shopper-signed-in"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "User name. Sign-in is by user name only; an email address is not accepted.",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Password",
+          "type": "string",
+          "description": "Password (never emit on events)",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ReturnUrl",
+          "type": "string",
+          "description": "Post-login return URL",
+          "order": 4,
+          "required": false
+        },
+        {
+          "name": "RememberLogin",
+          "type": "boolean",
+          "description": "Persist login cookie",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-shopper-signed-in",
+      "type": "event",
+      "name": "Shopper Signed In",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T14:21:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-sign-in-shopper",
+      "description": "Shopper successfully authenticated. This is the business event for sign-in; cookies and tokens are infrastructure.",
+      "tags": [
+        "DomainEvent",
+        "Identity"
+      ],
+      "eventType": "Domain Event",
+      "source": "Identity Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When sign-in completed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Authenticated account id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "UserName",
+          "type": "string",
+          "description": "Login name",
+          "order": 4,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-sign-in",
+      "type": "screen",
+      "name": "Login",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-sign-in-shopper",
+      "description": "Login screen (maps to Identity.API Account/Login and WebApp LogIn).",
+      "tags": [
+        "Trigger"
+      ],
+      "route": "/account/login",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-sign-in-shopper"
+      ]
+    },
+    {
+      "id": "error-invalid-credentials",
+      "type": "error",
+      "name": "Invalid Credentials",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-sign-in-shopper",
+      "description": "User name or password is incorrect, or account is locked/disabled.",
+      "tags": [],
+      "errorCode": "INVALID_CREDENTIALS",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-sign-in-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-sign-in-shopper",
+      "description": "Given a registered account, when Sign In Shopper with correct password then Shopper Signed In.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-account-registered"
+      ],
+      "whenCommandId": "cmd-sign-in-shopper",
+      "thenEvents": [
+        "evt-shopper-signed-in"
+      ]
+    },
+    {
+      "id": "gwt-sign-in-bad-credentials",
+      "type": "gwt",
+      "name": "Bad credentials",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-sign-in-shopper",
+      "description": "Given a registered account, when Sign In Shopper with wrong password then Invalid Credentials.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-account-registered"
+      ],
+      "whenCommandId": "cmd-sign-in-shopper",
+      "thenEvents": [],
+      "thenErrorId": "error-invalid-credentials"
+    },
+    {
+      "id": "cmd-sign-out-shopper",
+      "type": "command",
+      "name": "Sign Out Shopper",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-sign-out-shopper",
+      "description": "Ends the shopper's ASP.NET Identity session and appends Shopper Signed Out.",
+      "tags": [
+        "Identity"
+      ],
+      "isAsync": false,
+      "handler": "ShopperAccountCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "account.signOut"
+      ],
+      "aggregateRootId": "entity-shopper-account",
+      "events": [
+        "evt-shopper-signed-out"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Account ending the session",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "LogoutId",
+          "type": "string",
+          "description": "Optional logout context id from the client. ASP.NET Identity has no logout context, so it is accepted and not applied.",
+          "order": 3,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-shopper-signed-out",
+      "type": "event",
+      "name": "Shopper Signed Out",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-sign-out-shopper",
+      "description": "Shopper session ended.",
+      "tags": [
+        "DomainEvent",
+        "Identity"
+      ],
+      "eventType": "Domain Event",
+      "source": "Identity Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When sign-out completed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Account that signed out",
+          "order": 3,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-sign-out",
+      "type": "screen",
+      "name": "Logout",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-sign-out-shopper",
+      "description": "Confirm / trigger logout.",
+      "tags": [
+        "Trigger"
+      ],
+      "route": "/account/logout",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-sign-out-shopper"
+      ]
+    },
+    {
+      "id": "gwt-sign-out-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-sign-out-shopper",
+      "description": "Given Shopper Signed In, when Sign Out Shopper then Shopper Signed Out.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-signed-in"
+      ],
+      "whenCommandId": "cmd-sign-out-shopper",
+      "thenEvents": [
+        "evt-shopper-signed-out"
+      ]
+    },
+    {
+      "id": "error-shopper-account-not-found-on-sign-out",
+      "type": "error",
+      "name": "Shopper Account Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-sign-out-shopper",
+      "description": "Fires when the shopper account does not exist or is not active. Message: \"Shopper account does not exist.\"",
+      "tags": [],
+      "errorCode": "SHOPPER_ACCOUNT_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-sign-out-unknown-account",
+      "type": "gwt",
+      "name": "Unknown account",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-sign-out-shopper",
+      "description": "Given no account, when Sign Out Shopper then Shopper Account Not Found.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-sign-out-shopper",
+      "thenEvents": [],
+      "thenErrorId": "error-shopper-account-not-found-on-sign-out"
+    },
+    {
+      "id": "cmd-update-shopper-profile",
+      "type": "command",
+      "name": "Update Shopper Profile",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-shopper-profile",
+      "description": "Updates shopper profile fields used as checkout defaults.",
+      "tags": [
+        "Identity"
+      ],
+      "isAsync": false,
+      "handler": "ShopperAccountCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "account.updateProfile"
+      ],
+      "aggregateRootId": "entity-shopper-account",
+      "events": [
+        "evt-shopper-profile-updated"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Account to update",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Given name",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "LastName",
+          "type": "string",
+          "description": "Family name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "string",
+          "description": "Phone",
+          "order": 5,
+          "required": false
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Street",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "City",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "State",
+          "order": 8,
+          "required": false
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Country",
+          "order": 9,
+          "required": false
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Postal code",
+          "order": 10,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-shopper-profile-updated",
+      "type": "event",
+      "name": "Shopper Profile Updated",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-shopper-profile",
+      "description": "Shopper profile fields changed.",
+      "tags": [
+        "DomainEvent",
+        "Identity"
+      ],
+      "eventType": "Domain Event",
+      "source": "Identity Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When update completed",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Account id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "description": "Given name",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "LastName",
+          "type": "string",
+          "description": "Family name",
+          "order": 5,
+          "required": true
+        },
+        {
+          "name": "PhoneNumber",
+          "type": "string",
+          "description": "Phone",
+          "order": 6,
+          "required": false
+        },
+        {
+          "name": "Street",
+          "type": "string",
+          "description": "Street",
+          "order": 7,
+          "required": false
+        },
+        {
+          "name": "City",
+          "type": "string",
+          "description": "City",
+          "order": 8,
+          "required": false
+        },
+        {
+          "name": "State",
+          "type": "string",
+          "description": "State",
+          "order": 9,
+          "required": false
+        },
+        {
+          "name": "Country",
+          "type": "string",
+          "description": "Country",
+          "order": 10,
+          "required": false
+        },
+        {
+          "name": "ZipCode",
+          "type": "string",
+          "description": "Postal code",
+          "order": 11,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "screen-manage-account",
+      "type": "screen",
+      "name": "Manage Account",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-update-shopper-profile",
+      "description": "Manage account / profile form (Identity Manage views).",
+      "tags": [
+        "Trigger"
+      ],
+      "route": "/account/manage",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-update-shopper-profile"
+      ]
+    },
+    {
+      "id": "gwt-update-profile-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-update-shopper-profile",
+      "description": "Given Shopper Account Registered, when Update Shopper Profile then Shopper Profile Updated.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-account-registered"
+      ],
+      "whenCommandId": "cmd-update-shopper-profile",
+      "thenEvents": [
+        "evt-shopper-profile-updated"
+      ]
+    },
+    {
+      "id": "error-shopper-account-not-found-on-update-profile",
+      "type": "error",
+      "name": "Shopper Account Not Found",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-update-shopper-profile",
+      "description": "Fires when the shopper account does not exist. Checked after the account id, name and last name are present. Message: \"Shopper account does not exist.\"",
+      "tags": [],
+      "errorCode": "SHOPPER_ACCOUNT_NOT_FOUND",
+      "severity": "medium"
+    },
+    {
+      "id": "gwt-update-profile-unknown-account",
+      "type": "gwt",
+      "name": "Unknown account",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-08T17:07:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-update-shopper-profile",
+      "description": "Given no account, when Update Shopper Profile then Shopper Account Not Found.",
+      "tags": [
+        "TestCase",
+        "ErrorPath"
+      ],
+      "givenEvents": [],
+      "whenCommandId": "cmd-update-shopper-profile",
+      "thenEvents": [],
+      "thenErrorId": "error-shopper-account-not-found-on-update-profile"
+    },
+    {
+      "id": "cmd-grant-client-consent",
+      "type": "command",
+      "name": "Grant Client Consent",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-grant-client-consent",
+      "description": "Shopper grants a client application the scopes it requested.",
+      "tags": [
+        "Identity",
+        "ASP.NET Identity"
+      ],
+      "isAsync": false,
+      "handler": "ShopperAccountCommandHandler",
+      "triggerSources": [
+        "User Action"
+      ],
+      "requiredPermissions": [
+        "account.consent"
+      ],
+      "aggregateRootId": "entity-shopper-account",
+      "events": [
+        "evt-client-consent-granted"
+      ],
+      "state": [
+        {
+          "name": "CommandId",
+          "type": "guid",
+          "description": "Command identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Consenting account",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "ClientId",
+          "type": "string",
+          "description": "Client application id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "Scopes",
+          "type": "array",
+          "description": "Granted scope names",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "ReturnUrl",
+          "type": "string",
+          "description": "Post-consent return URL",
+          "order": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "evt-client-consent-granted",
+      "type": "event",
+      "name": "Client Consent Granted",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 45,
+      "sliceId": "slice-grant-client-consent",
+      "description": "Shopper granted a client application consent for the requested scopes.",
+      "tags": [
+        "DomainEvent",
+        "Identity",
+        "ASP.NET Identity"
+      ],
+      "eventType": "Domain Event",
+      "source": "Identity Service",
+      "state": [
+        {
+          "name": "EventId",
+          "type": "guid",
+          "description": "Event identifier",
+          "order": 1,
+          "required": true
+        },
+        {
+          "name": "Timestamp",
+          "type": "date",
+          "description": "When consent was granted",
+          "order": 2,
+          "required": true
+        },
+        {
+          "name": "AccountId",
+          "type": "guid",
+          "description": "Account id",
+          "order": 3,
+          "required": true
+        },
+        {
+          "name": "ClientId",
+          "type": "string",
+          "description": "Client application id",
+          "order": 4,
+          "required": true
+        },
+        {
+          "name": "Scopes",
+          "type": "array",
+          "description": "Granted scopes",
+          "order": 5,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "screen-consent",
+      "type": "screen",
+      "name": "Consent",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "width": 200,
+      "height": 44,
+      "sliceId": "slice-grant-client-consent",
+      "description": "Consent page listing the scopes a client application requests.",
+      "tags": [
+        "Trigger",
+        "ASP.NET Identity"
+      ],
+      "route": "/consent",
+      "layout": "",
+      "figmaUrl": "",
+      "screenRole": "trigger",
+      "events": [
+        "cmd-grant-client-consent"
+      ]
+    },
+    {
+      "id": "gwt-consent-happy",
+      "type": "gwt",
+      "name": "Happy path",
+      "x": 0,
+      "y": 0,
+      "selected": false,
+      "complexityScore": 1,
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-06T14:45:00Z",
+      "width": 280,
+      "height": 180,
+      "sliceId": "slice-grant-client-consent",
+      "description": "Given Shopper Signed In, when Grant Client Consent then Client Consent Granted.",
+      "tags": [
+        "TestCase",
+        "HappyPath"
+      ],
+      "givenEvents": [
+        "evt-shopper-signed-in"
+      ],
+      "whenCommandId": "cmd-grant-client-consent",
+      "thenEvents": [
+        "evt-client-consent-granted"
+      ]
+    }
+  ],
+  "swimlanes": [
+    {
+      "id": "slice-register-shopper-account",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Register Shopper Account",
+      "description": "Shopper self-registration. Built on ASP.NET Identity, no Duende. The handler reserves the trimmed email, appends Shopper Account Registered, then inserts the ASP.NET Identity login user (same id as the account; PasswordHasher stores the hash, never on events). eShop only seeds alice/bob and has no public Register action.",
+      "position": 200,
+      "width": 400,
+      "height": 520,
+      "order": 100,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 8,
+      "tags": [
+        "Identity",
+        "Shopper",
+        "CRUD-gap"
+      ],
+      "dependencies": [],
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Identity",
+      "commands": [
+        "cmd-register-shopper-account"
+      ],
+      "events": [
+        "evt-shopper-account-registered"
+      ],
+      "views": [],
+      "screens": [
+        "screen-register-shopper"
+      ],
+      "entities": [
+        "entity-shopper-account"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-email-already-registered",
+        "error-user-name-already-registered",
+        "error-user-name-invalid",
+        "error-password-requirements-not-met"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-register-happy",
+        "gwt-register-duplicate-email",
+        "gwt-register-duplicate-user-name",
+        "gwt-register-invalid-user-name",
+        "gwt-register-weak-password"
+      ]
+    },
+    {
+      "id": "slice-shopper-account-profile",
+      "type": "vertical",
+      "sliceKind": "state-view",
+      "name": "Shopper Account Profile",
+      "description": "Read model of a shopper account for manage-account and checkout defaults. Subscribes to Registered and Profile Updated. Address only, no payment-card fields. Ordering's Place Order carries the masked card snapshot. The seeded demo card fields (holder, masked number, type, expiration, security number) stay on the ASP.NET Identity login record in SQL only, like eShop's ApplicationUser, and never appear on events or this view. Key-deletion encryption is a later LawnDart item.",
+      "position": 628,
+      "width": 400,
+      "height": 520,
+      "order": 200,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 4,
+      "tags": [
+        "Identity",
+        "Shopper",
+        "StateView"
+      ],
+      "dependencies": [
+        "slice-register-shopper-account"
+      ],
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T19:33:00Z",
+      "boundedContext": "Identity",
+      "commands": [],
+      "events": [],
+      "views": [
+        "view-shopper-account-profile"
+      ],
+      "screens": [
+        "screen-shopper-account-profile-display"
+      ],
+      "entities": [
+        "entity-shopper-account"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": []
+    },
+    {
+      "id": "slice-sign-in-shopper",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Sign In Shopper",
+      "description": "Shopper signs in with user name and password. ASP.NET Identity only, no Duende. The command checks the password against the ASP.NET Identity login store (CheckPasswordSignInAsync, lockout on failure) and appends Shopper Signed In, the business event. Cookies and tokens are infrastructure for a later slice.",
+      "position": 1056,
+      "width": 400,
+      "height": 520,
+      "order": 300,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "tags": [
+        "Identity",
+        "Shopper",
+        "ASP.NET Identity"
+      ],
+      "dependencies": [
+        "slice-register-shopper-account"
+      ],
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Identity",
+      "commands": [
+        "cmd-sign-in-shopper"
+      ],
+      "events": [
+        "evt-shopper-signed-in"
+      ],
+      "views": [],
+      "screens": [
+        "screen-sign-in"
+      ],
+      "entities": [
+        "entity-shopper-account"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-invalid-credentials"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-sign-in-happy",
+        "gwt-sign-in-bad-credentials"
+      ]
+    },
+    {
+      "id": "slice-sign-out-shopper",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Sign Out Shopper",
+      "description": "Shopper ends the authenticated session (eShop AccountController.Logout). ASP.NET Identity only, no Duende. Appends Shopper Signed Out, the business event; clearing the ASP.NET Identity sign-in cookie is infrastructure.",
+      "position": 1484,
+      "width": 400,
+      "height": 520,
+      "order": 400,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Identity",
+        "Shopper",
+        "ASP.NET Identity"
+      ],
+      "dependencies": [
+        "slice-sign-in-shopper"
+      ],
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Identity",
+      "commands": [
+        "cmd-sign-out-shopper"
+      ],
+      "events": [
+        "evt-shopper-signed-out"
+      ],
+      "views": [],
+      "screens": [
+        "screen-sign-out"
+      ],
+      "entities": [
+        "entity-shopper-account"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-shopper-account-not-found-on-sign-out"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-sign-out-happy",
+        "gwt-sign-out-unknown-account"
+      ]
+    },
+    {
+      "id": "slice-update-shopper-profile",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Update Shopper Profile",
+      "description": "Shopper updates profile name, contact, and default shipping address (Identity Manage area / ApplicationUser fields).",
+      "position": 1912,
+      "width": 400,
+      "height": 520,
+      "order": 500,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 2,
+      "effortEstimate": 6,
+      "tags": [
+        "Identity",
+        "Shopper"
+      ],
+      "dependencies": [
+        "slice-register-shopper-account"
+      ],
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Identity",
+      "commands": [
+        "cmd-update-shopper-profile"
+      ],
+      "events": [
+        "evt-shopper-profile-updated"
+      ],
+      "views": [],
+      "screens": [
+        "screen-manage-account"
+      ],
+      "entities": [
+        "entity-shopper-account"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [
+        "error-shopper-account-not-found-on-update-profile"
+      ],
+      "externals": [],
+      "gwts": [
+        "gwt-update-profile-happy",
+        "gwt-update-profile-unknown-account"
+      ]
+    },
+    {
+      "id": "slice-grant-client-consent",
+      "type": "vertical",
+      "sliceKind": "state-change",
+      "name": "Grant Client Consent",
+      "description": "Thin client consent grant: the shopper approves the scopes a client application requests. ASP.NET Identity only, no Duende, so there is no consent server behind this slice yet. Deferred: not built for now. It stays in the model.",
+      "position": 2340,
+      "width": 400,
+      "height": 520,
+      "order": 600,
+      "actorRoleId": "role-shopper",
+      "status": "Planned",
+      "complexityScore": 1,
+      "effortEstimate": 3,
+      "tags": [
+        "Identity",
+        "ASP.NET Identity",
+        "OIDC",
+        "Thin",
+        "Deferred"
+      ],
+      "dependencies": [
+        "slice-sign-in-shopper"
+      ],
+      "dateCreated": "2026-10-06T14:45:00Z",
+      "lastUpdated": "2026-10-08T17:07:00Z",
+      "boundedContext": "Identity",
+      "commands": [
+        "cmd-grant-client-consent"
+      ],
+      "events": [
+        "evt-client-consent-granted"
+      ],
+      "views": [],
+      "screens": [
+        "screen-consent"
+      ],
+      "entities": [
+        "entity-shopper-account"
+      ],
+      "processes": [],
+      "roles": [
+        "role-shopper"
+      ],
+      "questions": [],
+      "errors": [],
+      "externals": [],
+      "gwts": [
+        "gwt-consent-happy"
+      ]
+    }
+  ],
+  "groups": [],
+  "connections": [],
+  "sequenceLayout": {
+    "mode": "structured",
+    "actorLanes": [],
+    "eventAssignments": {},
+    "eventSequence": [],
+    "options": {
+      "fixedLaneHeight": 120
+    }
+  }
+}

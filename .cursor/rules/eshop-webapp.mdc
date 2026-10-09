@@ -1,0 +1,96 @@
+---
+description: Storefront UI pattern for the eShop WebApp and view slices
+globs: src/dotnet-es-eshop/WebApp/**,src/dotnet-es-eshop/Catalog.API/Slices/BrowseCatalog/**,src/dotnet-es-eshop/Catalog.API/Slices/ViewCatalogItem/**,src/dotnet-es-eshop/Catalog.API/Slices/SearchCatalog/**,src/dotnet-es-eshop/Catalog.API/Slices/CatalogItemDetailAdmin/**,src/dotnet-es-eshop/Basket.API/Slices/BasketContents/**,src/dotnet-es-eshop/Basket.API/Slices/AddItemToBasket/**,src/dotnet-es-eshop/Basket.API/Slices/ChangeBasketItemQuantity/**,src/dotnet-es-eshop/Basket.API/Slices/RemoveItemFromBasket/**,src/dotnet-es-eshop/Ordering.API/Slices/OrdersByShopper/**,src/dotnet-es-eshop/Ordering.API/Slices/OrderSummary/**,src/dotnet-es-eshop/Ordering.API/Slices/PlaceOrder/**,src/dotnet-es-eshop/Identity.API/Slices/ShopperAccountProfile/**,src/dotnet-es-eshop/Identity.API/Slices/SignInShopper/**,src/dotnet-es-eshop/Identity.API/Slices/SignOutShopper/**,src/dotnet-es-eshop/Identity.API/Slices/UpdateShopperProfile/**,src/dotnet-es-eshop/Identity.API/Slices/RegisterShopperAccount/**
+alwaysApply: false
+---
+
+# eShop WebApp
+
+Blazor Razor components with interactive server rendering.
+
+`WebApp/Program.cs` calls `AddRazorComponents().AddInteractiveServerComponents()` and `MapRazorComponents<App>().AddInteractiveServerRenderMode()`. Health checks stay on `/health` and `/alive` in Development.
+
+## Source of truth
+
+Layout, CSS, fonts, images, icons, scripts, and shared components under `src/dotnet-es-eshop/WebApp` are the source of truth.
+
+Upstream [dotnet/eShop](https://github.com/dotnet/eShop) commit `dc7ea499cd356924fb6689b3702964a5869dbae9` is a background reference. Use the files in this repo.
+
+## One screen, one place
+
+| Screen | File | Route | Slice |
+|---|---|---|---|
+| Catalog | `WebApp/Components/Pages/Catalog/Catalog.razor` | `/` | BrowseCatalog |
+| Search | `WebApp/Components/Pages/Catalog/SearchCatalog.razor` | `/catalog/search` | SearchCatalog |
+| Item | `WebApp/Components/Pages/Item/ItemPage.razor` | `/item/{itemId}` | ViewCatalogItem |
+| Cart | `WebApp/Components/Pages/Cart/CartPage.razor` | `/cart` | BasketContents. The signed-in shopper account id is the buyer id |
+| Checkout | `WebApp/Components/Pages/Checkout/Checkout.razor` | `/checkout` | PlaceOrder. Reads BasketContents and ShopperAccountProfile |
+| Orders | `WebApp/Components/Pages/User/Orders.razor` | `/user/orders` | OrdersByShopper |
+| Sign in | `WebApp/Components/Pages/User/LogIn.razor` | `/user/login` | SignInShopper |
+| Sign out | `WebApp/Components/Pages/User/LogOut.razor` | `/user/logout` | SignOutShopper |
+
+Shared chrome stays in `WebApp/Components/Layout/`.
+Shared catalog widgets stay in `WebApp/Components/Catalog/`.
+Page-area placeholders stay in `WebApp/Placeholders/`. One interface per page area.
+
+Screens that are not in the table yet:
+
+- OrderSummary: `WebApp/Components/Pages/User/OrderSummary.razor` at `user/orders/{orderNumber}`
+- ShopperAccountProfile: header menu and checkout address. Add `WebApp/Components/Pages/User/Profile.razor` when that slice needs its own page.
+- CatalogItemDetailAdmin: no storefront page. The admin read stays on Catalog.API.
+
+## HTTP clients
+
+WebApp reads through the Aspire HTTP clients registered by `AddEShopStorefront`:
+
+- `catalog` at `https+http://catalog-api`
+- `basket` at `https+http://basket-api`
+- `ordering` at `https+http://ordering-api`
+
+ShopperAccountProfile uses an `identity` HTTP client. The address is `EShopStorefrontLinks.IdentityUrl`.
+
+WebApp does not open SQL and does not call LawnDart. The owning service exposes the view.
+
+## Admin area
+
+Maintenance and command slices are API only. Do not add HTML pages or admin forms in a service. Admin UI is a later WebApp admin area.
+
+## Endpoint and DTO
+
+The owning service maps one minimal API route:
+
+`GET /views/{kebab-case-slice-name}`
+
+| Slice | Route | DTO |
+|---|---|---|
+| BrowseCatalog | `GET /views/browse-catalog?pageIndex=&pageSize=&brand=&type=` | `BrowseCatalogView` |
+| ViewCatalogItem | `GET /views/view-catalog-item/{itemId}` | `ViewCatalogItemView` |
+| SearchCatalog | `GET /views/search-catalog?text=&pageIndex=&pageSize=` | `SearchCatalogView` |
+| BasketContents | `GET /views/basket-contents?buyerId=` | `BasketContentsView` |
+| OrdersByShopper | `GET /views/orders-by-shopper` | `OrdersByShopperView` |
+| OrderSummary | `GET /views/order-summary/{orderNumber}` | `OrderSummaryView` |
+| ShopperAccountProfile | `GET /views/shopper-account-profile` | `ShopperAccountProfileView` |
+
+`{SliceName}View` matches the slice folder name. A list row inside that JSON is `{SliceName}Item`.
+
+CatalogBrandsAndTypes exists at `GET /views/catalog-brands-and-types` (`CatalogBrandsAndTypesView`). The Catalog page reads rows, paging, and facet counts from Browse Catalog. It reads brand and type names from Catalog Brands And Types. Query `brand` and `type` are Guids. Repeated values select more than one brand or type. `pageIndex` starts at 0. `pageSize` defaults to 10 and is capped at 100. Item links use `/item/{guid}`.
+
+BasketContents query `buyerId` is the signed-in shopper account id. A missing or empty buyer id returns 400. An unknown buyer returns an empty basket. Prices are the unit prices captured on add. The cart page and the header bag call this route on the `basket` client. The cart, checkout, and orders pages redirect to `/user/login` when nobody is signed in. The catalog stays anonymous.
+
+Path constants live in `WebApp/Placeholders/ViewEndpoints.cs`.
+
+## Definition of done
+
+Replacing the placeholder with the real client call is part of the view slice's definition of done.
+
+1. Map the route on the owning service.
+2. Return `{SliceName}View`.
+3. Call it from WebApp with the HTTP client for that service.
+4. Remove the example implementation for that page area.
+5. Leave the page file in the folder in the table above.
+
+## CSS and scripts
+
+Use the CSS and scripts in `WebApp/wwwroot`. Add a `.razor.css` beside a component when that screen needs a local rule.
+
+Do not add a CSS framework or a JavaScript framework.
