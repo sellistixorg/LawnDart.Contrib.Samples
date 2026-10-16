@@ -12,6 +12,7 @@ var redis = builder.AddRedis("redis")
 
 var rabbitMq = builder.AddRabbitMQ("eventbus")
     .WithDataVolume()
+    .WithManagementPlugin()
     .WithLifetime(ContainerLifetime.Persistent);
 
 var sql = builder.AddSqlServer("sql")

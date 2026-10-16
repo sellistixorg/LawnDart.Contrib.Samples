@@ -24,6 +24,14 @@ dotnet run --project AppHost
 
 The Aspire dashboard prints the WebApp URL.
 
+## RabbitMQ management
+
+The AppHost calls `WithManagementPlugin()` on `eventbus`. On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. That page is the RabbitMQ management UI.
+
+Sign in as `guest`. Aspire does not take a user name for this resource, so the user stays `guest`. The password is the generated parameter `eventbus-password`. The dashboard shows that parameter on the `eventbus` resource. The same password is in the `eventbus` connection string.
+
+A message that fails all 5 attempts is dead-lettered. The exchange is `{event-type}.dlx`. The queue is `{event-type}.{subscription}.dlq`. In the UI, open Queues and find that name. `order-paid` for Catalog is `order-paid.catalog.dlq`.
+
 Seeded shoppers:
 
 | User | Password |
@@ -78,6 +86,7 @@ That runs every project under `tests/`. Default unit tests do not open SQL Serve
 - `Outbox_publish_reaches_two_service_queues`
 - `Competing_consumers_on_one_queue_deliver_once`
 - `Reactor_inbox_drops_a_replayed_outbox_message`
+- `Failed_handler_dead_letters_after_five_attempts`
 
 `Outbox_publisher_delivers_to_in_memory_subscribers` stays in memory and runs with the rest.
 

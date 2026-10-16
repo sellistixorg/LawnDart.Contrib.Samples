@@ -21,6 +21,12 @@ dotnet run --project AppHost
 
 The AppHost starts SQL Server, Redis, and RabbitMQ, then the services. The Aspire dashboard prints the WebApp URL.
 
+## RabbitMQ management
+
+On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. Sign in as `guest`. The password is the generated `eventbus-password` parameter on that resource. The same password is in the `eventbus` connection string.
+
+Dead-lettered messages use the exchange `{event-type}.dlx` and the queue `{event-type}.{subscription}.dlq`. Open Queues in the management UI and find that queue. `order-paid` for Catalog is `order-paid.catalog.dlq`.
+
 Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, and the masked demo card, come from the eShop seed. Payments are simulated. Checkout still posts that stand-in card.
 
 ## Services

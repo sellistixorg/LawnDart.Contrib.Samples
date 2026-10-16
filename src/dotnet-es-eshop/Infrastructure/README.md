@@ -51,7 +51,7 @@ Topology:
 
 `SetupTopology` is true. Host startup declares the exchange and the queues for message types this process records. Publish and subscribe declare the same objects on first use. Identity keeps InMemory.
 
-A failed delivery waits on a retry queue, then returns to the same queue. The wait defaults to 5 seconds. Dead-letter handling stays off, so a message that used its attempts still returns to that queue.
+A failed delivery waits on the retry queue `{event-type}.{subscription}.retry`, then returns to the same queue. The wait defaults to 5 seconds. The handler may run 5 times. After the last failure the message is dead-lettered. The dead-letter exchange is `{event-type}.dlx`. The dead-letter queue is `{event-type}.{subscription}.dlq`.
 
 The SQL outbox is the publish path. The SQL inbox is the consume path for reactors.
 

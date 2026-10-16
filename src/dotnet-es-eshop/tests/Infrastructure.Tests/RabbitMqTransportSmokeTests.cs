@@ -138,6 +138,55 @@ public class RabbitMqTransportSmokeTests
     }
 
     [Fact]
+    public async Task Failed_handler_dead_letters_after_five_attempts()
+    {
+        var broker = await RabbitBroker.TryConnectAsync();
+        if (broker is null)
+        {
+            RequireBrokerOrReturn();
+            return;
+        }
+
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var exchange = "eshop.smoke." + suffix;
+        var subscription = "dlq-" + suffix;
+        await using var provider = await broker.OpenAsync(subscription, exchange, options =>
+        {
+            options.MaxDeliveryAttempts = 5;
+            options.DeadLetterFailedMessages = true;
+            options.RetryDelay = TimeSpan.FromMilliseconds(200);
+        });
+        var transport = provider.GetRequiredService<IMessageTransport>();
+        var attempts = 0;
+        using var stop = new CancellationTokenSource();
+        var subscribe = transport.SubscribeAsync<SampleCatalogItemAdded>(
+            (_, _, _) =>
+            {
+                Interlocked.Increment(ref attempts);
+                throw new InvalidOperationException("always fail");
+            },
+            stop.Token);
+
+        var id = Guid.NewGuid();
+        await PublishOutboxAsync(transport, id, DateTime.UtcNow);
+
+        var deadLetterQueue = RabbitMqNames.DeadLetterQueue(EventName, subscription);
+        var deadLetterExchange = RabbitMqNames.DeadLetterExchange(EventName);
+        Assert.Equal(EventName + "." + subscription + ".dlq", deadLetterQueue);
+        Assert.Equal(EventName + ".dlx", deadLetterExchange);
+
+        var body = await broker.WaitForMessageAsync(deadLetterQueue, TimeSpan.FromSeconds(15));
+        var message = JsonSerializer.Deserialize<SampleCatalogItemAdded>(body, MessagingJson.Options);
+        Assert.NotNull(message);
+        Assert.Equal(id, message.Id);
+        Assert.Equal(5, Volatile.Read(ref attempts));
+
+        stop.Cancel();
+        await SwallowCancel(subscribe);
+        await broker.DeleteSubscriptionAsync(exchange, subscription);
+    }
+
+    [Fact]
     public async Task Reactor_inbox_drops_a_replayed_outbox_message()
     {
         var broker = await RabbitBroker.TryConnectAsync();
@@ -288,7 +337,10 @@ public class RabbitMqTransportSmokeTests
             }
         }
 
-        public async Task<ServiceProvider> OpenAsync(string subscriptionName, string exchange)
+        public async Task<ServiceProvider> OpenAsync(
+            string subscriptionName,
+            string exchange,
+            Action<RabbitMqTransportOptions>? configure = null)
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -299,6 +351,7 @@ public class RabbitMqTransportSmokeTests
                 options.TopicMapper = new SharedTopicMapper(exchange);
                 options.SetupTopology = true;
                 options.UnroutablePublish = RabbitMqUnroutablePublish.Throw;
+                configure?.Invoke(options);
             });
             var provider = services.BuildServiceProvider();
             _ = provider.GetRequiredService<IMessageTransport>();
@@ -325,6 +378,31 @@ public class RabbitMqTransportSmokeTests
             {
                 return false;
             }
+        }
+
+        public async Task<byte[]> WaitForMessageAsync(string queue, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            var factory = new ConnectionFactory { Uri = new Uri(_uri) };
+            await using var connection = await factory.CreateConnectionAsync();
+            await using var channel = await connection.CreateChannelAsync();
+            while (DateTime.UtcNow < deadline)
+            {
+                try
+                {
+                    var delivery = await channel.BasicGetAsync(queue, autoAck: true);
+                    if (delivery is not null)
+                        return delivery.Body.ToArray();
+                }
+                catch (Exception)
+                {
+                    // The dead-letter queue is declared with the subscription. A get before that declare throws.
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new TimeoutException($"Timed out waiting for a message on {queue}.");
         }
 
         public async Task DeleteSubscriptionAsync(string exchange, string subscriptionName)

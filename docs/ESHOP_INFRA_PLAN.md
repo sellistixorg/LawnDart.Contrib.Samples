@@ -30,7 +30,8 @@ Original eShop uses RabbitMQ as the integration bus. This sample uses `LawnDart.
 2. Publisher and consumer hosts register it from the Aspire `eventbus` connection: Basket, Catalog, Ordering, OrderProcessor, PaymentProcessor, and Webhooks. Identity has no eventbus reference and keeps the in-memory transport. WebApp registers the transport with subscription name `webapp` (`AddOrderStatusNotifications` calls `AddEShopMessageTransport(EShopServiceNames.WebApp)`). It subscribes to order status events only and has no SQL outbox or inbox.
 3. Publish goes through the SQL outbox. Consume goes through the SQL inbox.
 4. Subscription names are `basket`, `catalog`, `ordering`, `order-processor`, `payment-processor`, `webhooks`, and `webapp`. Every event type uses the direct exchange `eshop.integration`. The routing key is the event type name. The queue is `{event-type}.{subscription}`. `SetupTopology` is true, so host startup declares those queues for the message types the process records. Publish and subscribe still declare them on first use.
-5. `RabbitMqTransportSmokeTests` covers outbox publish through the package transport to a second subscription, reactor inbox dedupe, and competing consumers on one queue. The test runs when RabbitMQ is reachable (`ESHOP_RABBITMQ`, or `amqp://guest:guest@127.0.0.1:5672`). Registration tests run without a broker. Set `ESHOP_REQUIRE_RABBITMQ=1` to fail that smoke test when the broker is down.
+5. A failed delivery waits on `{event-type}.{subscription}.retry` (default 5 seconds) and returns, up to 5 attempts. `DeadLetterFailedMessages` is true, so the last failure is dead-lettered. The dead-letter exchange is `{event-type}.dlx`. The dead-letter queue is `{event-type}.{subscription}.dlq`.
+6. `RabbitMqTransportSmokeTests` covers outbox publish through the package transport to a second subscription, reactor inbox dedupe, competing consumers on one queue, and a handler that fails every attempt until the message is dead-lettered. The test runs when RabbitMQ is reachable (`ESHOP_RABBITMQ`, or `amqp://guest:guest@127.0.0.1:5672`). Registration tests run without a broker. Set `ESHOP_REQUIRE_RABBITMQ=1` to fail that smoke test when the broker is down.
 
 ## Redis
 
@@ -67,10 +68,9 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 1. The SQL outbox publishes every appended event. `OrderPlaced` goes on the bus with the ship-to address, the cardholder name, the last four digits, and the expiry.
 2. A queue binds to its event type when that service starts, or when its subscriber first runs. A message published before that bind is not queued.
-3. A failed delivery waits on a retry queue (default 5 seconds) and returns, up to 5 attempts. Dead-letter handling is off, so the message stays on the queue after that.
-4. The inbox row is written after the command returns, not in the same transaction as the command.
-5. `GracePeriodConfirmed` is sent straight to the transport. There is no outbox row for it.
-6. Four catalog views each read a stored row with their own helper.
+3. The inbox row is written after the command returns, not in the same transaction as the command.
+4. `GracePeriodConfirmed` is sent straight to the transport. There is no outbox row for it.
+5. Four catalog views each read a stored row with their own helper.
 
 ## References
 

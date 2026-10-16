@@ -237,6 +237,8 @@ public static class EShopLawnDartHost
             options.SubscriptionName = subscriptionClient;
             options.TopicMapper = new SharedTopicMapper(IntegrationExchangeName);
             options.SetupTopology = true;
+            options.MaxDeliveryAttempts = 5;
+            options.DeadLetterFailedMessages = true;
         });
     }
 

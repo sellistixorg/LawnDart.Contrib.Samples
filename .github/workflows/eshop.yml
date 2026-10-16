@@ -4,7 +4,7 @@
 #
 # RabbitMQ is a service container and ESHOP_REQUIRE_RABBITMQ=1 is set.
 # RabbitMqTransportSmokeTests then connects to the broker. Without that
-# variable, the three broker tests return success when port 5672 is closed.
+# variable, the broker tests return success when port 5672 is closed.
 #
 # SQL Server is not started. Infrastructure tests place a SQL connection
 # string in configuration and assert registrations. They do not open a database.

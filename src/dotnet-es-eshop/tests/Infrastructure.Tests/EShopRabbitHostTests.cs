@@ -53,6 +53,8 @@ public class EShopRabbitHostTests
         Assert.Equal(EShopServiceNames.Catalog, options.SubscriptionName);
         Assert.Equal(RabbitConnectionString, options.Uri);
         Assert.True(options.SetupTopology);
+        Assert.Equal(5, options.MaxDeliveryAttempts);
+        Assert.True(options.DeadLetterFailedMessages);
         Assert.Equal(
             EShopLawnDartHost.IntegrationExchangeName,
             options.TopicMapper.TopicFor("order-paid"));
