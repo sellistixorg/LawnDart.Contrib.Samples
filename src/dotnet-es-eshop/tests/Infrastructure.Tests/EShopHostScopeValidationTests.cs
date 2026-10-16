@@ -249,7 +249,7 @@ public class EShopHostScopeValidationTests
     {
         var values = new Dictionary<string, string?>
         {
-            [$"ConnectionStrings:{EShopRabbitMq.ConnectionName}"] = RabbitConnectionString
+            [$"ConnectionStrings:{EShopLawnDartHost.EventBusConnectionName}"] = RabbitConnectionString
         };
         foreach (var name in sqlNames)
             values[$"ConnectionStrings:{name}"] = SqlConnectionString;

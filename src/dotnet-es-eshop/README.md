@@ -4,7 +4,7 @@ Event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on [Law
 
 | Pin | Version |
 |---|---|
-| LawnDart family | 0.5.0-alpha.1 |
+| LawnDart family | 0.6.0-alpha.1 |
 | Aspire (AppHost SDK and hosting) | 13.6.1 |
 | .NET SDK | 10.0.401 (`global.json`, roll forward to the latest feature band) |
 
@@ -38,7 +38,7 @@ The seed also copies the eShop demo card (masked number, security code 123 for a
 ```
 AppHost/              Aspire host: SQL Server, Redis, RabbitMQ, services
 ServiceDefaults/      OpenTelemetry, health, service discovery, resilience
-Infrastructure/       LawnDart SQL host kit and the sample RabbitMQ transport
+Infrastructure/       LawnDart SQL host kit and RabbitMQ transport registration
 Shared/               Events shared across services
 Identity.API/         Shopper accounts (ASP.NET Identity) and sign-in tokens
 Catalog.API/          Items, pictures, stock
@@ -53,7 +53,7 @@ tests/                Per-service tests
 .slices/index.json    Slice name to folder map
 ```
 
-LawnDart product stores here are InMemory (tests) and SQL Server. Services that own a SQL database call `AddEShopLawnDart` in `Infrastructure/`. The RabbitMQ `IMessageTransport` in that same project is sample code. The AppHost starts Redis. Basket keeps SQL views.
+LawnDart product stores here are InMemory (tests) and SQL Server. Services that own a SQL database call `AddEShopLawnDart` in `Infrastructure/`. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps SQL views.
 
 ## Slices
 

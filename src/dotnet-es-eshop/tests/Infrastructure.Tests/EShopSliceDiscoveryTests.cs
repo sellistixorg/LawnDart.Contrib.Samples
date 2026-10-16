@@ -118,7 +118,7 @@ public class EShopSliceDiscoveryTests
         {
             var token = EventTypeCatalog.TryGetDeclaredName(pair.Event);
             Assert.False(string.IsNullOrWhiteSpace(token));
-            Assert.Equal(token, EShopRabbitMq.RoutingKey(pair.Event));
+            Assert.Equal(token, MessageTypeNames.Require(pair.Event));
         }
     }
 

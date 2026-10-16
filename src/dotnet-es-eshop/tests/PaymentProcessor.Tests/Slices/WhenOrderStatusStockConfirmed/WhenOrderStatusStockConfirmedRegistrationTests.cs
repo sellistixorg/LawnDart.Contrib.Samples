@@ -4,6 +4,7 @@ using LawnDart.EventSourcing;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Messaging.Outbox;
 using LawnDart.Outbox;
 using LawnDart.Projections.Lightweight;
@@ -40,9 +41,13 @@ public class WhenOrderStatusStockConfirmedRegistrationTests
         Assert.Single(reactors);
         Assert.Equal(
             "order-status-stock-confirmed",
-            EShopRabbitMq.RoutingKey(typeof(OrderStatusStockConfirmed)));
-        Assert.NotEqual("order-stock-confirmed", EShopRabbitMq.RoutingKey(typeof(OrderStatusStockConfirmed)));
-        Assert.Equal("eshop.payment-processor", EShopRabbitMq.QueueName(EShopServiceNames.PaymentProcessor));
+            MessageTypeNames.Require(typeof(OrderStatusStockConfirmed)));
+        Assert.NotEqual("order-stock-confirmed", MessageTypeNames.Require(typeof(OrderStatusStockConfirmed)));
+        Assert.Equal(
+            "order-status-stock-confirmed.payment-processor",
+            RabbitMqNames.Queue(
+                MessageTypeNames.Require(typeof(OrderStatusStockConfirmed)),
+                EShopServiceNames.PaymentProcessor));
     }
 
     [Fact]

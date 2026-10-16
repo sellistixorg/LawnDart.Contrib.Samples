@@ -21,7 +21,6 @@ builder.AddEShopSlices(paymentAssembly);
 var app = builder.Build();
 
 await app.InitializeEShopLawnDartSqlAsync();
-await app.InitializeEShopRabbitMqAsync();
 
 app.MapDefaultEndpoints();
 app.MapEShopSlices(paymentAssembly);

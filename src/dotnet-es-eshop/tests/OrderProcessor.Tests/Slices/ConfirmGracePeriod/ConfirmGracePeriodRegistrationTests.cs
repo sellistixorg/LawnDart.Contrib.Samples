@@ -49,8 +49,8 @@ public class ConfirmGracePeriodRegistrationTests
     [Fact]
     public void Routing_keys_match_the_event_tokens()
     {
-        Assert.Equal("order-started", EShopRabbitMq.RoutingKey(typeof(OrderStarted)));
-        Assert.Equal("grace-period-confirmed", EShopRabbitMq.RoutingKey(typeof(GracePeriodConfirmed)));
+        Assert.Equal("order-started", MessageTypeNames.Require(typeof(OrderStarted)));
+        Assert.Equal("grace-period-confirmed", MessageTypeNames.Require(typeof(GracePeriodConfirmed)));
     }
 
     [Fact]

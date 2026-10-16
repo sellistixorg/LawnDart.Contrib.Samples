@@ -4,9 +4,9 @@ Shared LawnDart host registration for eShop services that own an Aspire SQL data
 
 ## Register
 
-Call `AddEShopLawnDart` from the service host. Pass the Aspire SQL connection name (`catalogdb`, `basketdb`, and the other names in `EShopSqlConnections`). Pass the service hook (`AddCatalogContext`, and the rest). Pass a subscription client from `EShopServiceNames` when the host has the Aspire `eventbus` reference.
+Call `AddEShopLawnDart` from the service host. Pass the Aspire SQL connection name (`catalogdb`, `basketdb`, and the other names in `EShopSqlConnections`). Pass the service hook (`AddCatalogContext`, and the rest). Pass a subscription name from `EShopServiceNames` when the host has the Aspire `eventbus` reference.
 
-Call `InitializeEShopLawnDartSqlAsync` after `Build` and before the host runs. That calls LawnDart `InitializeSchemaAsync` for the event log, transactional outbox, view store, checkpoints, and durable inbox. The calls are idempotent. LawnDart 0.5 has no versioned migrator.
+Call `InitializeEShopLawnDartSqlAsync` after `Build` and before the host runs. That calls LawnDart `InitializeSchemaAsync` for the event log, transactional outbox, view store, checkpoints, and durable inbox. The calls are idempotent. LawnDart has no versioned migrator.
 
 ```csharp
 builder.AddServiceDefaults();
@@ -17,7 +17,6 @@ builder.AddEShopLawnDart(
 
 var app = builder.Build();
 await app.InitializeEShopLawnDartSqlAsync();
-await app.InitializeEShopRabbitMqAsync();
 app.MapDefaultEndpoints();
 app.Run();
 ```
@@ -32,28 +31,31 @@ One bounded context named `default` per process. SQL schema `dbo`.
 - SQL view store and checkpoints (`AddSqlProjectionStores`)
 - Transactional outbox (`EnableOutbox` plus `AddMessageTransportOutboxPublisher`). Pass `enableOutbox: false` when this process must not poll that outbox. OrderProcessor does this. It shares `orderingdb` with Ordering.API, and Ordering.API publishes that outbox.
 - Durable inbox (`AddSqlInboxStore`)
-- Sample RabbitMQ `IMessageTransport` when a subscription client is passed
-- In-memory message transport when no subscription client is passed (Identity, and unit tests)
+- RabbitMQ transport (`AddRabbitMqTransport`) when a subscription name is passed
+- In-memory message transport when no subscription name is passed (Identity, and unit tests)
 
 `RequireTenantId` is false, matching a single-tenant sample host.
 
-## RabbitMQ adapter
+## RabbitMQ
 
-`RabbitMqMessageTransport` implements LawnDart `IMessageTransport`. It is sample code in this project. LawnDart product packages ship InMemory messaging only.
+`AddRabbitMqTransport` from `LawnDart.Messaging.RabbitMQ` is the bus. The Aspire connection `eventbus` is the broker URI.
 
 Topology:
 
-- Topic exchange `eshop.integration`
-- One durable queue per service: `eshop.basket`, `eshop.catalog`, `eshop.ordering`, `eshop.order-processor`, `eshop.payment-processor`, `eshop.webhooks`, `eshop.webapp`
-- Routing key is the event `EventTypeName` token
-- Instances of one service share that queue (competing consumers)
-- A second service has its own queue and receives its own copy
+- Direct exchange `eshop.integration` (`SharedTopicMapper`)
+- Routing key is the event type name
+- One quorum queue per event type and subscription: `{event-type}.{subscription}`
+- Subscription names are `basket`, `catalog`, `ordering`, `order-processor`, `payment-processor`, `webhooks`, and `webapp`
+- Instances of one service share that subscription, so they compete for each event queue
+- A second service has its own queues and receives its own copy
 
-`InitializeEShopRabbitMqAsync` declares the exchange and that service's queue before a subscriber starts. Hosts that call `AddEShopLawnDart` run it next to `InitializeEShopLawnDartSqlAsync`. WebApp calls `InitializeEShopRabbitMqAsync` only. Publish and subscribe still declare the same objects on first use. Identity keeps InMemory. The helper returns when `RabbitMqMessageTransport` is absent.
+`SetupTopology` is true. Host startup declares the exchange and the queues for message types this process records. Publish and subscribe declare the same objects on first use. Identity keeps InMemory.
 
-The SQL outbox is the publish path. The SQL inbox is the consume path for reactors. `AddRabbitMQClient("eventbus")` supplies the Aspire `IConnection`. The connection client name is the subscription client.
+A failed delivery waits on a retry queue, then returns to the same queue. The wait defaults to 5 seconds. Dead-letter handling stays off, so a message that used its attempts still returns to that queue.
 
-Identity has no `eventbus` reference, so it keeps InMemory. WebApp registers the sample transport without the SQL host kit. `AddOrderStatusNotifications` calls `AddEShopMessageTransport(EShopServiceNames.WebApp)`. The subscription client is `webapp` and the queue is `eshop.webapp`. WebApp subscribes to order status events only. It has no SQL outbox or inbox. WebhookClient does not register the transport.
+The SQL outbox is the publish path. The SQL inbox is the consume path for reactors.
+
+Identity has no `eventbus` reference, so it keeps InMemory. WebApp registers the transport without the SQL host kit. `AddOrderStatusNotifications` calls `AddEShopMessageTransport(EShopServiceNames.WebApp)`. The subscription name is `webapp`. WebApp subscribes to order status events only. It has no SQL outbox or inbox. WebhookClient does not register the transport.
 
 ## Slice hooks
 
@@ -75,9 +77,9 @@ Call `WithEventTypes` before `WithCommandHandlers` and `WithProjections`. Projec
 
 `AddEShopSlices(serviceAssembly)` registers every `IReactor<TEvent>` and `IEventProcessor<TEvent>` in that assembly. The hosted service opens one scope for each message and resolves the reactor or processor in that scope. It then calls `AddServices` on every `IEShopSliceModule` in the assembly, in full-name order. `MapEShopSlices(serviceAssembly)` calls `MapEndpoints` on those modules. A worker that has no HTTP pipeline skips `MapEShopSlices`. OrderProcessor does this.
 
-The scan keeps the per-service queue, the SQL inbox, and the routing key from the event type token. `AddEShopLawnDart` already registers those. The inbox key matches LawnDart `AddReactor`: `reactor`, a hash of the reactor full name, and the message id. A second scan leaves one hosted service for each reactor and event pair. A missing `Apply` method on aggregate state throws the first time that event is applied.
+The scan keeps the subscription name, the SQL inbox, and the event type name. `AddEShopLawnDart` already registers those. The inbox key matches LawnDart `AddReactor`: `reactor`, a hash of the reactor full name, and the message id. A second scan leaves one hosted service for each reactor and event pair. A missing `Apply` method on aggregate state throws the first time that event is applied.
 
-LawnDart 0.5 resolves the SQL event store only after `WithEventTypes`. An empty hook gets `EShopHostCatalogEvent` (`eshop-host-catalog-ready`) so the service can start and create tables. A hook that calls `WithEventTypes` supplies the catalog, and the stand-in type is left out.
+LawnDart resolves the SQL event store only after `WithEventTypes`. An empty hook gets `EShopHostCatalogEvent` (`eshop-host-catalog-ready`) so the service can start and create tables. A hook that calls `WithEventTypes` supplies the catalog, and the stand-in type is left out.
 
 ## Identity and storefront glue
 

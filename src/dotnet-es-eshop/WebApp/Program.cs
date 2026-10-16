@@ -15,8 +15,6 @@ builder.AddOrderStatusNotifications();
 
 var app = builder.Build();
 
-await app.InitializeEShopRabbitMqAsync();
-
 app.MapDefaultEndpoints();
 
 if (!app.Environment.IsDevelopment())

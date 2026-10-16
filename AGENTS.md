@@ -19,7 +19,7 @@ This repository holds community samples that **consume** LawnDart NuGet packages
 It does not publish the LawnDart library. Adapter packages live in LawnDart.Contrib.
 
 InMemory and SQL Server are the stores demonstrated here.
-InMemory is the LawnDart product transport used in tests and Identity. The RabbitMQ `IMessageTransport` under `Infrastructure/` is sample code.
+InMemory is the LawnDart product transport used in tests and Identity. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`.
 Do not claim Redis, Postgres, Azure Service Bus, or Wolverine. Do not claim a store or transport this sample does not run.
 
 Prefer one folder per vertical slice under `src/dotnet-es-eshop/`.

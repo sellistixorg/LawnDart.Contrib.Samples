@@ -8,13 +8,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-    <PackageReference Include="Aspire.RabbitMQ.Client" />
-    <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="LawnDart" />
     <PackageReference Include="LawnDart.EventSourcing" />
     <PackageReference Include="LawnDart.EventSourcing.SqlServer" />
     <PackageReference Include="LawnDart.Messaging" />
     <PackageReference Include="LawnDart.Messaging.InMemory" />
+    <PackageReference Include="LawnDart.Messaging.RabbitMQ" />
     <PackageReference Include="LawnDart.Messaging.SqlServer" />
     <PackageReference Include="LawnDart.Projections.Lightweight" />
   </ItemGroup>

@@ -1,11 +1,12 @@
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Outbox;
 using LawnDart.Messaging.SqlServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RabbitMQ.Client;
+using Microsoft.Extensions.Options;
 
 namespace LawnDart.Samples.EShop.Infrastructure.Tests;
 
@@ -19,13 +20,16 @@ public class EShopRabbitHostTests
     [Fact]
     public void Subscription_queues_are_distinct_per_service()
     {
-        var ordering = EShopRabbitMq.QueueName(EShopServiceNames.Ordering);
-        var processor = EShopRabbitMq.QueueName(EShopServiceNames.OrderProcessor);
+        var token = MessageTypeNames.Require(typeof(SampleCatalogItemAdded));
+        var ordering = RabbitMqNames.Queue(token, EShopServiceNames.Ordering);
+        var processor = RabbitMqNames.Queue(token, EShopServiceNames.OrderProcessor);
 
-        Assert.Equal("eshop.ordering", ordering);
-        Assert.Equal("eshop.order-processor", processor);
+        Assert.Equal("sample-catalog-item-added.ordering", ordering);
+        Assert.Equal("sample-catalog-item-added.order-processor", processor);
         Assert.NotEqual(ordering, processor);
-        Assert.Equal("sample-catalog-item-added", EShopRabbitMq.RoutingKey(typeof(SampleCatalogItemAdded)));
+        Assert.Equal(
+            EShopLawnDartHost.IntegrationExchangeName,
+            new SharedTopicMapper(EShopLawnDartHost.IntegrationExchangeName).TopicFor(token));
     }
 
     [Fact]
@@ -39,9 +43,20 @@ public class EShopRabbitHostTests
 
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(RabbitMqMessageTransport));
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(IMessageTransport));
+        Assert.Contains(builder.Services, d => d.ServiceType == typeof(IMessageTopologySetup));
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(SqlServerInboxStore));
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(IOutboxPublisher));
         Assert.DoesNotContain(builder.Services, d => d.ServiceType == typeof(InMemoryMessageTransport));
+
+        using var provider = builder.Services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<RabbitMqTransportOptions>>().Value;
+        Assert.Equal(EShopServiceNames.Catalog, options.SubscriptionName);
+        Assert.Equal(RabbitConnectionString, options.Uri);
+        Assert.True(options.SetupTopology);
+        Assert.Equal(
+            EShopLawnDartHost.IntegrationExchangeName,
+            options.TopicMapper.TopicFor("order-paid"));
+        Assert.IsType<RabbitMqMessageTransport>(provider.GetRequiredService<IMessageTransport>());
     }
 
     [Fact]
@@ -59,24 +74,30 @@ public class EShopRabbitHostTests
                 context => context.AddCatalogContext(),
                 EShopServiceNames.Catalog));
 
-        Assert.Contains(EShopRabbitMq.ConnectionName, ex.Message, StringComparison.Ordinal);
+        Assert.Contains(EShopLawnDartHost.EventBusConnectionName, ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Rabbit_topology_init_returns_when_the_transport_is_absent()
+    public void In_memory_host_does_not_register_rabbit()
     {
-        var services = new ServiceCollection();
-        await using var provider = services.BuildServiceProvider();
-        await provider.InitializeEShopRabbitMqAsync();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [$"ConnectionStrings:{EShopSqlConnections.Catalog}"] = SqlConnectionString
+        });
+        builder.AddEShopLawnDart(
+            EShopSqlConnections.Catalog,
+            context => context.AddCatalogContext());
+
+        Assert.DoesNotContain(builder.Services, d => d.ServiceType == typeof(RabbitMqMessageTransport));
+        using var provider = builder.Services.BuildServiceProvider();
+        Assert.IsType<InMemoryMessageTransport>(provider.GetRequiredService<IMessageTransport>());
     }
 
     [Fact]
-    public void Codec_round_trips_event_body_and_message_context()
+    public void Envelope_round_trips_message_context()
     {
-        var id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-        var occurred = new DateTime(2026, 10, 7, 12, 0, 0, DateTimeKind.Utc);
         var enqueued = new DateTimeOffset(2026, 10, 7, 12, 0, 1, TimeSpan.Zero);
-        var source = new SampleCatalogItemAdded(id, occurred);
         var context = new MessageContext
         {
             MessageId = "outbox-1",
@@ -88,23 +109,18 @@ public class EShopRabbitHostTests
             Headers = new Dictionary<string, string> { ["traceparent"] = "00-abc-def-01" }
         };
 
-        var properties = RabbitMqMessageCodec.ToProperties(context, "sample-catalog-item-added", "catalog");
-        var restored = RabbitMqMessageCodec.DeserializeBody<SampleCatalogItemAdded>(
-            RabbitMqMessageCodec.SerializeBody(source));
-        var restoredContext = RabbitMqMessageCodec.ToContext(properties);
+        var headers = new Dictionary<string, string>(StringComparer.Ordinal);
+        MessageEnvelopeHeaders.Write(context, "sample-catalog-item-added", headers);
+        var restored = MessageEnvelopeHeaders.Read(headers, RabbitMqMessageTransport.TransportTypeName).Context;
 
-        Assert.Equal(id, restored.Id);
-        Assert.Equal(occurred, restored.Timestamp);
-        Assert.Equal("outbox-1", restoredContext.MessageId);
-        Assert.Equal("corr-1", restoredContext.CorrelationId);
-        Assert.Equal("cause-1", restoredContext.CausationId);
-        Assert.Equal("tenant-1", restoredContext.TenantId);
-        Assert.Equal("user-1", restoredContext.UserId);
-        Assert.Equal(enqueued, restoredContext.EnqueuedAt);
-        Assert.Equal(RabbitMqMessageCodec.TransportType, restoredContext.TransportType);
-        Assert.Equal("00-abc-def-01", restoredContext.Headers["traceparent"]);
-        Assert.Equal("catalog", properties.AppId);
-        Assert.Equal(DeliveryModes.Persistent, properties.DeliveryMode);
+        Assert.Equal("outbox-1", restored.MessageId);
+        Assert.Equal("corr-1", restored.CorrelationId);
+        Assert.Equal("cause-1", restored.CausationId);
+        Assert.Equal("tenant-1", restored.TenantId);
+        Assert.Equal("user-1", restored.UserId);
+        Assert.Equal(enqueued, restored.EnqueuedAt);
+        Assert.Equal(RabbitMqMessageTransport.TransportTypeName, restored.TransportType);
+        Assert.Equal("00-abc-def-01", restored.Headers["traceparent"]);
     }
 
     private static HostApplicationBuilder CreateBuilder()
@@ -113,7 +129,7 @@ public class EShopRabbitHostTests
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             [$"ConnectionStrings:{EShopSqlConnections.Catalog}"] = SqlConnectionString,
-            [$"ConnectionStrings:{EShopRabbitMq.ConnectionName}"] = RabbitConnectionString
+            [$"ConnectionStrings:{EShopLawnDartHost.EventBusConnectionName}"] = RabbitConnectionString
         });
         return builder;
     }

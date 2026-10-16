@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using LawnDart;
 using LawnDart.EventSourcing.SqlServer;
 using LawnDart.EventSourcing.SqlServer.EventStore;
@@ -5,6 +6,7 @@ using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
 using LawnDart.Messaging.Outbox;
+using LawnDart.Messaging.RabbitMQ;
 using Microsoft.Extensions.Hosting;
 using LawnDart.Messaging.SqlServer;
 using LawnDart.Outbox;
@@ -30,14 +32,29 @@ public static class EShopLawnDartHost
     /// </summary>
     public const string SchemaName = "dbo";
 
+    /// <summary>
+    /// Aspire connection name from <c>AddRabbitMQ("eventbus")</c>.
+    /// The value is the broker URI.
+    /// </summary>
+    public const string EventBusConnectionName = "eventbus";
+
+    /// <summary>
+    /// Direct exchange shared by eShop services.
+    /// </summary>
+    public const string IntegrationExchangeName = "eshop.integration";
+
     private const string LogCategory = "LawnDart.Samples.EShop.Infrastructure";
+
+    private static readonly Regex SubscriptionNamePattern = new(
+        "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
     /// Registers LawnDart against the Aspire SQL connection named <paramref name="connectionName"/>.
     /// </summary>
     /// <param name="subscriptionClient">
-    /// RabbitMQ queue owner, for example <see cref="EShopServiceNames.Catalog"/>.
-    /// When set, the host uses the sample RabbitMQ <c>IMessageTransport</c> and the Aspire
+    /// RabbitMQ subscription name, for example <see cref="EShopServiceNames.Catalog"/>.
+    /// When set, the host uses <c>LawnDart.Messaging.RabbitMQ</c> and the Aspire
     /// <c>eventbus</c> connection. When omitted, the host uses <c>LawnDart.Messaging.InMemory</c>.
     /// </param>
     /// <param name="enableOutbox">
@@ -93,7 +110,7 @@ public static class EShopLawnDartHost
         var context = services.AddBoundedContext(ContextName);
         configureContext(context);
 
-        // LawnDart 0.5 resolves the SQL event store and outbox publisher only when a catalog exists.
+        // LawnDart resolves the SQL event store and outbox publisher only when a catalog exists.
         if (context.EventCatalog is null)
         {
             context.WithEventTypes(typeof(EShopHostCatalogEvent));
@@ -112,7 +129,7 @@ public static class EShopLawnDartHost
 
     /// <summary>
     /// Creates LawnDart SQL tables for the event log, outbox, views, checkpoints, and inbox.
-    /// Idempotent. LawnDart 0.5 exposes <c>InitializeSchemaAsync</c>, not a versioned migrator.
+    /// Idempotent. LawnDart exposes <c>InitializeSchemaAsync</c>, not a versioned migrator.
     /// </summary>
     public static Task InitializeEShopLawnDartSqlAsync(
         this IHost host,
@@ -156,32 +173,36 @@ public static class EShopLawnDartHost
     }
 
     /// <summary>
-    /// Declares the <c>eshop.integration</c> topic exchange and this service's durable queue.
-    /// Returns when the host has no <see cref="RabbitMqMessageTransport"/> (Identity uses InMemory).
-    /// Publish and subscribe still declare the same objects on first use.
+    /// Records <paramref name="messageType"/> so RabbitMQ topology setup can declare its queue.
+    /// A second record of the same type is ignored.
     /// </summary>
-    public static Task InitializeEShopRabbitMqAsync(
-        this IHost host,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(host);
-        return host.Services.InitializeEShopRabbitMqAsync(cancellationToken);
-    }
-
-    /// <inheritdoc cref="InitializeEShopRabbitMqAsync(IHost, CancellationToken)"/>
-    public static async Task InitializeEShopRabbitMqAsync(
-        this IServiceProvider services,
-        CancellationToken cancellationToken = default)
+    /// <param name="services">The service collection.</param>
+    /// <param name="messageType">CLR message type. It must declare <c>[EventTypeName]</c>.</param>
+    /// <returns>The same <paramref name="services"/>.</returns>
+    public static IServiceCollection AddEShopSubscription(this IServiceCollection services, Type messageType)
     {
         ArgumentNullException.ThrowIfNull(services);
-        var transport = services.GetService<RabbitMqMessageTransport>();
-        if (transport is null)
-        {
-            return;
-        }
+        ArgumentNullException.ThrowIfNull(messageType);
 
-        await transport.InitializeTopologyAsync(cancellationToken).ConfigureAwait(false);
+        var already = services.Any(descriptor =>
+            descriptor.ServiceType == typeof(MessageSubscription)
+            && descriptor.ImplementationInstance is MessageSubscription subscription
+            && subscription.MessageType == messageType);
+        if (!already)
+            services.AddSingleton(new MessageSubscription(messageType));
+
+        return services;
     }
+
+    /// <summary>
+    /// Records <typeparamref name="TMessage"/> so RabbitMQ topology setup can declare its queue.
+    /// </summary>
+    /// <typeparam name="TMessage">CLR message type. It must declare <c>[EventTypeName]</c>.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same <paramref name="services"/>.</returns>
+    public static IServiceCollection AddEShopSubscription<TMessage>(this IServiceCollection services)
+        where TMessage : class
+        => services.AddEShopSubscription(typeof(TMessage));
 
     private static void RegisterTransport<TBuilder>(
         TBuilder builder,
@@ -195,31 +216,37 @@ public static class EShopLawnDartHost
             return;
         }
 
-        EShopRabbitMq.ValidateSubscriptionClient(subscriptionClient);
-        var eventBus = builder.Configuration.GetConnectionString(EShopRabbitMq.ConnectionName);
+        if (!SubscriptionNamePattern.IsMatch(subscriptionClient))
+        {
+            throw new ArgumentException(
+                "Subscription name must be 1 to 64 characters of lowercase letters, digits, and hyphens.",
+                nameof(subscriptionClient));
+        }
+
+        var eventBus = builder.Configuration.GetConnectionString(EventBusConnectionName);
         if (string.IsNullOrWhiteSpace(eventBus))
         {
             throw new InvalidOperationException(
-                $"Connection string '{EShopRabbitMq.ConnectionName}' is missing. " +
+                $"Connection string '{EventBusConnectionName}' is missing. " +
                 "Start this service from the Aspire AppHost so the RabbitMQ reference is injected.");
         }
 
-        builder.AddRabbitMQClient(
-            EShopRabbitMq.ConnectionName,
-            configureConnectionFactory: factory => factory.ClientProvidedName = subscriptionClient);
-
-        services.AddSingleton(new RabbitMqTransportOptions(subscriptionClient));
-        services.AddSingleton<RabbitMqMessageTransport>();
-        services.AddSingleton<IMessageTransport>(sp => sp.GetRequiredService<RabbitMqMessageTransport>());
+        services.AddRabbitMqTransport(options =>
+        {
+            options.Uri = eventBus;
+            options.SubscriptionName = subscriptionClient;
+            options.TopicMapper = new SharedTopicMapper(IntegrationExchangeName);
+            options.SetupTopology = true;
+        });
     }
 
     /// <summary>
-    /// Registers the sample message transport for a subscriber that has no SQL outbox.
+    /// Registers the message transport for a subscriber that has no SQL outbox.
     /// </summary>
     /// <param name="builder">The host.</param>
-    /// <param name="subscriptionClient">Queue owner, for example <see cref="EShopServiceNames.WebApp"/>.</param>
+    /// <param name="subscriptionClient">Subscription name, for example <see cref="EShopServiceNames.WebApp"/>.</param>
     /// <remarks>
-    /// A present <c>eventbus</c> connection string uses the sample RabbitMQ transport.
+    /// A present <c>eventbus</c> connection string uses <c>LawnDart.Messaging.RabbitMQ</c>.
     /// A missing connection string uses <c>LawnDart.Messaging.InMemory</c>.
     /// </remarks>
     public static void AddEShopMessageTransport(this IHostApplicationBuilder builder, string subscriptionClient)
@@ -227,7 +254,7 @@ public static class EShopLawnDartHost
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscriptionClient);
 
-        var eventBus = builder.Configuration.GetConnectionString(EShopRabbitMq.ConnectionName);
+        var eventBus = builder.Configuration.GetConnectionString(EventBusConnectionName);
         if (string.IsNullOrWhiteSpace(eventBus))
         {
             builder.Services.AddInMemoryMessaging();

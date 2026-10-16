@@ -1,4 +1,6 @@
 using System.Reflection;
+using LawnDart.EventStore;
+using LawnDart.Messaging;
 using LawnDart.Patterns.EventProcessing;
 using LawnDart.Patterns.Reaction;
 using Microsoft.AspNetCore.Routing;
@@ -157,8 +159,8 @@ public static class EShopSlices
                 return byName;
 
             return string.Compare(
-                EShopRabbitMq.RoutingKey(left.Event),
-                EShopRabbitMq.RoutingKey(right.Event),
+                EventToken(left.Event),
+                EventToken(right.Event),
                 StringComparison.Ordinal);
         });
         return found;
@@ -212,7 +214,11 @@ public static class EShopSlices
         Type eventType)
     {
         services.TryAddTransient(implementation);
+        services.AddEShopSubscription(eventType);
         var host = openHost.MakeGenericType(implementation, eventType);
         services.TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IHostedService), host));
     }
+
+    private static string EventToken(Type eventType) =>
+        EventTypeCatalog.TryGetDeclaredName(eventType) ?? eventType.FullName ?? eventType.Name;
 }
