@@ -4,6 +4,7 @@ using LawnDart.EventSourcing;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Messaging.Outbox;
 using LawnDart.Outbox;
 using LawnDart.Projections.Lightweight;
@@ -37,8 +38,10 @@ public class WhenOrderPaidDeductStockRegistrationTests
             .ToArray();
 
         Assert.Single(reactors);
-        Assert.Equal("order-paid", EShopRabbitMq.RoutingKey(typeof(OrderPaid)));
-        Assert.Equal("eshop.catalog", EShopRabbitMq.QueueName(EShopServiceNames.Catalog));
+        Assert.Equal("order-paid", MessageTypeNames.Require(typeof(OrderPaid)));
+        Assert.Equal(
+            "order-paid.catalog",
+            RabbitMqNames.Queue(MessageTypeNames.Require(typeof(OrderPaid)), EShopServiceNames.Catalog));
     }
 
     [Fact]

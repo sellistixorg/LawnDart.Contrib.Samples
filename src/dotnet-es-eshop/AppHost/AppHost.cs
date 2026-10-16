@@ -4,8 +4,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 // SQL Server is the durable LawnDart backend (event log, views, checkpoints, outbox, inbox).
 // The container image is mcr.microsoft.com/mssql/server:2025-latest.
 // Service hosts read the Aspire SQL connection string in AddEShopLawnDart.
-// Publisher and consumer hosts read eventbus for the sample RabbitMQ IMessageTransport.
-// That adapter lives in this sample. It is not a LawnDart product transport.
+// Publisher and consumer hosts read eventbus as the broker URI for LawnDart.Messaging.RabbitMQ.
 // Redis IViewStore is deferred. Basket keeps SQL views.
 
 var redis = builder.AddRedis("redis")
@@ -13,6 +12,7 @@ var redis = builder.AddRedis("redis")
 
 var rabbitMq = builder.AddRabbitMQ("eventbus")
     .WithDataVolume()
+    .WithManagementPlugin()
     .WithLifetime(ContainerLifetime.Persistent);
 
 var sql = builder.AddSqlServer("sql")

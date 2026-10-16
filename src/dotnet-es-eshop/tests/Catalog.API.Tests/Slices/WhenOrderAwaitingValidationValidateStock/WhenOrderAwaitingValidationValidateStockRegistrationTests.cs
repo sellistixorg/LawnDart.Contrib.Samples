@@ -5,6 +5,7 @@ using LawnDart.EventSourcing;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Messaging.Outbox;
 using LawnDart.Outbox;
 using LawnDart.Projections.Lightweight;
@@ -40,8 +41,12 @@ public class WhenOrderAwaitingValidationValidateStockRegistrationTests
         Assert.Single(reactors);
         Assert.Equal(
             "order-awaiting-validation",
-            EShopRabbitMq.RoutingKey(typeof(OrderAwaitingValidation)));
-        Assert.Equal("eshop.catalog", EShopRabbitMq.QueueName(EShopServiceNames.Catalog));
+            MessageTypeNames.Require(typeof(OrderAwaitingValidation)));
+        Assert.Equal(
+            "order-awaiting-validation.catalog",
+            RabbitMqNames.Queue(
+                MessageTypeNames.Require(typeof(OrderAwaitingValidation)),
+                EShopServiceNames.Catalog));
     }
 
     [Fact]

@@ -2,7 +2,7 @@
 
 Samples that use [LawnDart](https://www.nuget.org/packages/LawnDart). This repository is MIT licensed. See `LICENSE`.
 
-The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on LawnDart, .NET 10, and .NET Aspire. LawnDart packages are pinned to `0.5.0-alpha.1`.
+The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on LawnDart, .NET 10, and .NET Aspire. LawnDart packages are pinned to `0.6.0-alpha.1`.
 
 ## Prerequisites
 
@@ -21,6 +21,12 @@ dotnet run --project AppHost
 
 The AppHost starts SQL Server, Redis, and RabbitMQ, then the services. The Aspire dashboard prints the WebApp URL.
 
+## RabbitMQ management
+
+On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. Sign in as `guest`. The password is the generated `eventbus-password` parameter on that resource. The same password is in the `eventbus` connection string.
+
+Dead-lettered messages use the exchange `{event-type}.dlx` and the queue `{event-type}.{subscription}.dlq`. Open Queues in the management UI and find that queue. `order-paid` for Catalog is `order-paid.catalog.dlq`.
+
 Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, and the masked demo card, come from the eShop seed. Payments are simulated. Checkout still posts that stand-in card.
 
 ## Services
@@ -36,10 +42,10 @@ Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, 
 | `PaymentProcessor` | Simulated payment |
 | `WebApp` | Blazor storefront |
 | `Webhooks.API`, `WebhookClient` | Scaffolds |
-| `Infrastructure` | LawnDart SQL host kit and the sample RabbitMQ transport |
+| `Infrastructure` | LawnDart SQL host kit and RabbitMQ transport registration |
 | `Shared` | Events shared across services |
 
-LawnDart product stores in this sample are InMemory (tests) and SQL Server. The RabbitMQ transport under `Infrastructure/` is sample code. The AppHost starts Redis. Basket keeps SQL views.
+LawnDart product stores in this sample are InMemory (tests) and SQL Server. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps SQL views.
 
 ## Slices
 
@@ -63,6 +69,6 @@ This sample is a demo. Payments are simulated. `OrderPlaced` on the bus carries 
 
 ## LawnDart
 
-Install the packages from [nuget.org](https://www.nuget.org/packages/LawnDart). Product source is [sellistixorg/LawnDart](https://github.com/sellistixorg/LawnDart), at the tag that matches `0.5.0-alpha.1`.
+Install the packages from [nuget.org](https://www.nuget.org/packages/LawnDart). Product source is [sellistixorg/LawnDart](https://github.com/sellistixorg/LawnDart), at the tag that matches `0.6.0-alpha.1`.
 
 Storefront files copied from dotnet/eShop are listed in `src/dotnet-es-eshop/WebApp/THIRD-PARTY-NOTICES.md`. Catalog seed pictures are covered by `src/dotnet-es-eshop/Catalog.API/Seed/NOTICE`.

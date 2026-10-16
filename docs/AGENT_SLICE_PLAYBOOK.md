@@ -27,15 +27,15 @@ Example: `Ordering.API/Slices/MarkOrderStockConfirmed/Order.MarkOrderStockConfir
 
 ## Infrastructure rules (already scaffolded)
 
-- Consume LawnDart NuGet **0.5.0-alpha.1** (see `Directory.Packages.props`). Do not vendor LawnDart source.
+- Consume LawnDart NuGet **0.6.0-alpha.1** (see `Directory.Packages.props`). Do not vendor LawnDart source.
 - Durable store: **SQL Server** via Aspire (`UseSqlServer` when wiring a context). InMemory is fine for unit GWT tests.
 - Aspire AppHost already provisions SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`), Redis, and RabbitMQ and wires `WithReference` like original eShop.
-- The sample RabbitMQ `IMessageTransport` is in `Infrastructure/`. Redis `IViewStore` is deferred. Slice work must not invent another transport or view-store adapter.
+- The RabbitMQ transport is `LawnDart.Messaging.RabbitMQ`, registered from `AddEShopLawnDart`. Redis `IViewStore` is deferred. Slice work must not invent another transport or view-store adapter.
 - Add only published LawnDart packages and the packages this sample already uses.
 
 ## Host wiring
 
-Service hosts call `AddEShopLawnDart` and `InitializeEShopLawnDartSqlAsync`. Hosts with the Aspire `eventbus` reference also call `InitializeEShopRabbitMqAsync`. Leave the Aspire graph as it is.
+Service hosts call `AddEShopLawnDart` and `InitializeEShopLawnDartSqlAsync`. RabbitMQ topology setup runs when the host starts (`SetupTopology`). Leave the Aspire graph as it is.
 
 `WithEventTypes` and `WithCommandHandlers` scan an assembly. `AddLawnDartHttpCommands` does too. Each service calls each of those once, from that service's `Program.cs`, or from the context hook `Program.cs` calls. Pass the service assembly. Every slice in that assembly is included.
 
@@ -83,7 +83,7 @@ One page component per view, under `WebApp/Components/Pages/`. The owning servic
 
 ## Honesty
 
-README and commits must not claim Redis or Rabbit as LawnDart product backends. RabbitMQ in this sample is the adapter under `Infrastructure/`. Redis `IViewStore` is deferred.
+README and commits must not claim Redis as a LawnDart product store. RabbitMQ in this sample is `LawnDart.Messaging.RabbitMQ`. Redis `IViewStore` is deferred.
 
 ## Open questions
 

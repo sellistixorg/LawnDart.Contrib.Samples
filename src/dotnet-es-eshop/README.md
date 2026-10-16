@@ -4,7 +4,7 @@ Event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on [Law
 
 | Pin | Version |
 |---|---|
-| LawnDart family | 0.5.0-alpha.1 |
+| LawnDart family | 0.6.0-alpha.1 |
 | Aspire (AppHost SDK and hosting) | 13.6.1 |
 | .NET SDK | 10.0.401 (`global.json`, roll forward to the latest feature band) |
 
@@ -24,6 +24,14 @@ dotnet run --project AppHost
 
 The Aspire dashboard prints the WebApp URL.
 
+## RabbitMQ management
+
+The AppHost calls `WithManagementPlugin()` on `eventbus`. On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. That page is the RabbitMQ management UI.
+
+Sign in as `guest`. Aspire does not take a user name for this resource, so the user stays `guest`. The password is the generated parameter `eventbus-password`. The dashboard shows that parameter on the `eventbus` resource. The same password is in the `eventbus` connection string.
+
+A message that fails all 5 attempts is dead-lettered. The exchange is `{event-type}.dlx`. The queue is `{event-type}.{subscription}.dlq`. In the UI, open Queues and find that name. `order-paid` for Catalog is `order-paid.catalog.dlq`.
+
 Seeded shoppers:
 
 | User | Password |
@@ -38,7 +46,7 @@ The seed also copies the eShop demo card (masked number, security code 123 for a
 ```
 AppHost/              Aspire host: SQL Server, Redis, RabbitMQ, services
 ServiceDefaults/      OpenTelemetry, health, service discovery, resilience
-Infrastructure/       LawnDart SQL host kit and the sample RabbitMQ transport
+Infrastructure/       LawnDart SQL host kit and RabbitMQ transport registration
 Shared/               Events shared across services
 Identity.API/         Shopper accounts (ASP.NET Identity) and sign-in tokens
 Catalog.API/          Items, pictures, stock
@@ -53,7 +61,7 @@ tests/                Per-service tests
 .slices/index.json    Slice name to folder map
 ```
 
-LawnDart product stores here are InMemory (tests) and SQL Server. Services that own a SQL database call `AddEShopLawnDart` in `Infrastructure/`. The RabbitMQ `IMessageTransport` in that same project is sample code. The AppHost starts Redis. Basket keeps SQL views.
+LawnDart product stores here are InMemory (tests) and SQL Server. Services that own a SQL database call `AddEShopLawnDart` in `Infrastructure/`. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps SQL views.
 
 ## Slices
 
@@ -78,6 +86,7 @@ That runs every project under `tests/`. Default unit tests do not open SQL Serve
 - `Outbox_publish_reaches_two_service_queues`
 - `Competing_consumers_on_one_queue_deliver_once`
 - `Reactor_inbox_drops_a_replayed_outbox_message`
+- `Failed_handler_dead_letters_after_five_attempts`
 
 `Outbox_publisher_delivers_to_in_memory_subscribers` stays in memory and runs with the rest.
 

@@ -6,7 +6,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
 
 // Redis IViewStore is deferred. Basket keeps SQL views.
-// Queue name differs from Ordering.API so the two processes do not compete for the same messages.
+// Subscription name differs from Ordering.API so the two processes do not compete for the same messages.
 // One scan of this service assembly. Every OrderProcessor slice is included.
 var processorAssembly = Assembly.GetExecutingAssembly();
 builder.AddEShopLawnDart(
@@ -20,6 +20,5 @@ builder.AddEShopSlices(processorAssembly);
 var host = builder.Build();
 
 await host.InitializeEShopLawnDartSqlAsync();
-await host.InitializeEShopRabbitMqAsync();
 
 host.Run();

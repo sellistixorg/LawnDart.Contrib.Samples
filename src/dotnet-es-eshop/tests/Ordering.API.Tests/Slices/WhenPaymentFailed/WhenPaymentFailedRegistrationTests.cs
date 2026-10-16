@@ -4,6 +4,7 @@ using LawnDart.EventSourcing;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Messaging.Outbox;
 using LawnDart.Outbox;
 using LawnDart.Projections.Lightweight;
@@ -41,8 +42,10 @@ public class WhenPaymentFailedRegistrationTests
             .ToArray();
 
         Assert.Single(reactors);
-        Assert.Equal("payment-failed", EShopRabbitMq.RoutingKey(typeof(PaymentFailed)));
-        Assert.Equal("eshop.ordering", EShopRabbitMq.QueueName(EShopServiceNames.Ordering));
+        Assert.Equal("payment-failed", MessageTypeNames.Require(typeof(PaymentFailed)));
+        Assert.Equal(
+            "payment-failed.ordering",
+            RabbitMqNames.Queue(MessageTypeNames.Require(typeof(PaymentFailed)), EShopServiceNames.Ordering));
     }
 
     [Fact]

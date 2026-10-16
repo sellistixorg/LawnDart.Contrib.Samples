@@ -28,7 +28,7 @@ public class ConfirmGracePeriodTests
         Assert.Equal(orderId, published.Event.OrderId);
         Assert.Equal(GracePeriodConfirmed.IdFor(orderId), published.Event.Id);
         Assert.Equal(published.Event.Id.ToString("D"), published.Context.MessageId);
-        Assert.Equal("grace-period-confirmed", LawnDart.Samples.EShop.Infrastructure.EShopRabbitMq.RoutingKey(typeof(GracePeriodConfirmed)));
+        Assert.Equal("grace-period-confirmed", MessageTypeNames.Require(typeof(GracePeriodConfirmed)));
     }
 
     [Fact]

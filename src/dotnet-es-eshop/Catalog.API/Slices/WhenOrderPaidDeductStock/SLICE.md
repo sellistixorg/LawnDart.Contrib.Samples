@@ -16,6 +16,6 @@ An unknown product is skipped by Deduct Catalog Stock. A removed product is skip
 
 A delivery with no message id throws. The host logs that failure and rethrows it. The inbox does not record the message.
 
-`AddEShopSlices` scans the Catalog assembly and registers the reactor. `AddEShopLawnDart` already registers the `catalog` queue (`eshop.catalog`) and the SQL inbox. Deduct Catalog Stock stays in that slice, including `POST /api/catalog/deduct-catalog-stock`. `OrderPaid` stays in `Shared/Events/` with token `order-paid`.
+`AddEShopSlices` scans the Catalog assembly and registers the reactor. `AddEShopLawnDart` registers the RabbitMQ transport with subscription name `catalog` and the SQL inbox. The queue for this event is `order-paid.catalog`. Deduct Catalog Stock stays in that slice, including `POST /api/catalog/deduct-catalog-stock`. `OrderPaid` stays in `Shared/Events/` with token `order-paid`.
 
 This is the eShop handler on `OrderStatusChangedToPaid` that calls `RemoveStock`.

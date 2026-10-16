@@ -24,7 +24,7 @@ Checkout goes to `/user/orders?placed={orderId}`. On that first load, when the o
 
 Seven messages refresh the list. Order Started, Order Awaiting Validation, Order Status Stock Confirmed, and Order Paid carry the buyer id. A message for another shopper leaves this page alone. Order Shipped, Order Cancelled, and Order Cancelled For Stock carry the order id. The page keeps the order ids from its own latest read. A shipped or cancelled message refreshes the page only when that read contains the order id. An order id the page did not load leaves the page alone.
 
-The storefront listens on the sample message transport. When `eventbus` is set, that transport is the sample RabbitMQ adapter and the queue is `eshop.webapp`. Every WebApp instance shares that queue, so each message reaches one instance. When `eventbus` is missing, the transport is in-memory. WebApp has no SQL database, so it does not call `AddEShopLawnDart`.
+The storefront listens on the message transport. When `eventbus` is set, that transport is `LawnDart.Messaging.RabbitMQ`. The exchange is `eshop.integration`. Each order status event has its own queue, named `{event-type}.webapp`. Every WebApp instance uses the subscription name `webapp`, so each message reaches one instance. When `eventbus` is missing, the transport is in-memory. WebApp has no SQL database, so it does not call `AddEShopLawnDart`.
 
 A catalog picture with no URL uses `images/example-product.svg`. Order detail stays on `GET /views/order-summary/{orderNumber}` until a page is added. Screen rules: `.cursor/rules/eshop-webapp.mdc`.
 

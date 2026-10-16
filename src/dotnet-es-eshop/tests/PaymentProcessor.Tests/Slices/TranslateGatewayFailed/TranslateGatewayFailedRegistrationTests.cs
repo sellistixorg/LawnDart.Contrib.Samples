@@ -3,6 +3,7 @@ using LawnDart.EventSourcing;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Projections.Lightweight;
 using LawnDart.Samples.EShop.Infrastructure;
 using LawnDart.Samples.EShop.Payment.Commands;
@@ -37,8 +38,12 @@ public class TranslateGatewayFailedRegistrationTests
         Assert.Single(hosted);
         Assert.Equal(
             "payment-gateway-charge-failed",
-            EShopRabbitMq.RoutingKey(typeof(PaymentGatewayChargeFailed)));
-        Assert.Equal("eshop.payment-processor", EShopRabbitMq.QueueName(EShopServiceNames.PaymentProcessor));
+            MessageTypeNames.Require(typeof(PaymentGatewayChargeFailed)));
+        Assert.Equal(
+            "payment-gateway-charge-failed.payment-processor",
+            RabbitMqNames.Queue(
+                MessageTypeNames.Require(typeof(PaymentGatewayChargeFailed)),
+                EShopServiceNames.PaymentProcessor));
         Assert.DoesNotContain(
             EShopSlices.FindReactors(typeof(TranslateGatewayFailedReactor).Assembly),
             pair => pair.Reactor == typeof(TranslateGatewayFailedReactor));

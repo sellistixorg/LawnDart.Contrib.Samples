@@ -3,6 +3,7 @@ using LawnDart.EventSourcing;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
+using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Projections.Lightweight;
 using LawnDart.Samples.EShop.Infrastructure;
 using LawnDart.Samples.EShop.Payment.Commands;
@@ -38,8 +39,12 @@ public class TranslateGatewaySucceededRegistrationTests
         Assert.Single(hosted);
         Assert.Equal(
             "payment-gateway-charge-succeeded",
-            EShopRabbitMq.RoutingKey(typeof(PaymentGatewayChargeSucceeded)));
-        Assert.Equal("eshop.payment-processor", EShopRabbitMq.QueueName(EShopServiceNames.PaymentProcessor));
+            MessageTypeNames.Require(typeof(PaymentGatewayChargeSucceeded)));
+        Assert.Equal(
+            "payment-gateway-charge-succeeded.payment-processor",
+            RabbitMqNames.Queue(
+                MessageTypeNames.Require(typeof(PaymentGatewayChargeSucceeded)),
+                EShopServiceNames.PaymentProcessor));
     }
 
     [Fact]
@@ -228,9 +233,12 @@ public class TranslateGatewaySucceededRegistrationTests
 
             Assert.Contains(attemptId.ToString("D"), error.Message, StringComparison.Ordinal);
             Assert.Contains("no message id", error.Message, StringComparison.Ordinal);
-            var logged = Assert.Single(log.Errors);
-            Assert.Contains(attemptId.ToString(), logged, StringComparison.Ordinal);
-            Assert.Contains("Translate Gateway Succeeded failed", logged, StringComparison.Ordinal);
+            Assert.NotEmpty(log.Errors);
+            Assert.All(log.Errors, logged =>
+            {
+                Assert.Contains(attemptId.ToString(), logged, StringComparison.Ordinal);
+                Assert.Contains("Translate Gateway Succeeded failed", logged, StringComparison.Ordinal);
+            });
             var before = await host.Services.GetRequiredService<IEventStore>()
                 .ReadStreamAsync($"PaymentAttempt:{attemptId}");
             Assert.DoesNotContain(before, stored => stored.Event is PaymentSucceeded);

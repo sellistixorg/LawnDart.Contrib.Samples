@@ -14,7 +14,6 @@ builder.Services.AddEShopIdentityUrl(builder.Configuration);
 var app = builder.Build();
 
 await app.InitializeEShopLawnDartSqlAsync();
-await app.InitializeEShopRabbitMqAsync();
 
 app.MapDefaultEndpoints();
 
