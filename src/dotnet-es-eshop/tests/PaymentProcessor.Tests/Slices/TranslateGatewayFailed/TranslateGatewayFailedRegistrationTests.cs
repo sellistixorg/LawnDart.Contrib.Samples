@@ -40,10 +40,11 @@ public class TranslateGatewayFailedRegistrationTests
             "payment-gateway-charge-failed",
             MessageTypeNames.Require(typeof(PaymentGatewayChargeFailed)));
         Assert.Equal(
-            "payment-gateway-charge-failed.payment-processor",
+            EShopServiceNames.PaymentProcessor,
             RabbitMqNames.Queue(
-                MessageTypeNames.Require(typeof(PaymentGatewayChargeFailed)),
-                EShopServiceNames.PaymentProcessor));
+                EShopServiceNames.PaymentProcessor,
+                RabbitMqQueueLayout.Subscription,
+                MessageTypeNames.Require(typeof(PaymentGatewayChargeFailed))));
         Assert.DoesNotContain(
             EShopSlices.FindReactors(typeof(TranslateGatewayFailedReactor).Assembly),
             pair => pair.Reactor == typeof(TranslateGatewayFailedReactor));

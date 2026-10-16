@@ -21,11 +21,12 @@ public class EShopRabbitHostTests
     public void Subscription_queues_are_distinct_per_service()
     {
         var token = MessageTypeNames.Require(typeof(SampleCatalogItemAdded));
-        var ordering = RabbitMqNames.Queue(token, EShopServiceNames.Ordering);
-        var processor = RabbitMqNames.Queue(token, EShopServiceNames.OrderProcessor);
+        var ordering = RabbitMqNames.Queue(EShopServiceNames.Ordering, RabbitMqQueueLayout.Subscription, token);
+        var processor = RabbitMqNames.Queue(EShopServiceNames.OrderProcessor, RabbitMqQueueLayout.Subscription, token);
 
-        Assert.Equal("sample-catalog-item-added.ordering", ordering);
-        Assert.Equal("sample-catalog-item-added.order-processor", processor);
+        Assert.Equal(EShopServiceNames.Ordering, ordering);
+        Assert.Equal(EShopServiceNames.OrderProcessor, processor);
+        Assert.Equal("ordering.dlq", RabbitMqNames.DeadLetterQueue(EShopServiceNames.Ordering));
         Assert.NotEqual(ordering, processor);
         Assert.Equal(
             EShopLawnDartHost.IntegrationExchangeName,
@@ -53,8 +54,10 @@ public class EShopRabbitHostTests
         Assert.Equal(EShopServiceNames.Catalog, options.SubscriptionName);
         Assert.Equal(RabbitConnectionString, options.Uri);
         Assert.True(options.SetupTopology);
+        Assert.Equal(RabbitMqQueueLayout.Subscription, options.QueueLayout);
         Assert.Equal(5, options.MaxDeliveryAttempts);
         Assert.True(options.DeadLetterFailedMessages);
+        Assert.Equal("catalog.dlq", RabbitMqNames.DeadLetterQueue(options.SubscriptionName));
         Assert.Equal(
             EShopLawnDartHost.IntegrationExchangeName,
             options.TopicMapper.TopicFor("order-paid"));

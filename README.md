@@ -2,7 +2,7 @@
 
 Samples that use [LawnDart](https://www.nuget.org/packages/LawnDart). This repository is MIT licensed. See `LICENSE`.
 
-The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on LawnDart, .NET 10, and .NET Aspire. LawnDart packages are pinned to `0.6.0-alpha.1`.
+The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on LawnDart, .NET 10, and .NET Aspire. LawnDart packages are pinned to `0.6.0-alpha.2`.
 
 ## Prerequisites
 
@@ -25,7 +25,9 @@ The AppHost starts SQL Server, Redis, and RabbitMQ, then the services. The Aspir
 
 On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. Sign in as `guest`. The password is the generated `eventbus-password` parameter on that resource. The same password is in the `eventbus` connection string.
 
-Dead-lettered messages use the exchange `{event-type}.dlx` and the queue `{event-type}.{subscription}.dlq`. Open Queues in the management UI and find that queue. `order-paid` for Catalog is `order-paid.catalog.dlq`.
+Dead-lettered messages use the exchange `{subscription}.dlx` and the queue `{subscription}.dlq`. Open Queues in the management UI and find that queue. Catalog's dead-letter queue is `catalog.dlq`.
+
+Upgrading an existing broker: delete the old `eshop.*` queues, delete `eshop.integration` if that exchange is a topic, and delete the per-event queues and exchanges. Or wipe the RabbitMQ volume and start again.
 
 Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, and the masked demo card, come from the eShop seed. Payments are simulated. Checkout still posts that stand-in card.
 
@@ -69,6 +71,6 @@ This sample is a demo. Payments are simulated. `OrderPlaced` on the bus carries 
 
 ## LawnDart
 
-Install the packages from [nuget.org](https://www.nuget.org/packages/LawnDart). Product source is [sellistixorg/LawnDart](https://github.com/sellistixorg/LawnDart), at the tag that matches `0.6.0-alpha.1`.
+Install the packages from [nuget.org](https://www.nuget.org/packages/LawnDart). Product source is [sellistixorg/LawnDart](https://github.com/sellistixorg/LawnDart), at the tag that matches `0.6.0-alpha.2`.
 
 Storefront files copied from dotnet/eShop are listed in `src/dotnet-es-eshop/WebApp/THIRD-PARTY-NOTICES.md`. Catalog seed pictures are covered by `src/dotnet-es-eshop/Catalog.API/Seed/NOTICE`.

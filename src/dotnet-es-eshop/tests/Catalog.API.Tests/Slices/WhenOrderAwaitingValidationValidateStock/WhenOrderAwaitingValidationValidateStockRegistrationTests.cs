@@ -43,10 +43,11 @@ public class WhenOrderAwaitingValidationValidateStockRegistrationTests
             "order-awaiting-validation",
             MessageTypeNames.Require(typeof(OrderAwaitingValidation)));
         Assert.Equal(
-            "order-awaiting-validation.catalog",
+            EShopServiceNames.Catalog,
             RabbitMqNames.Queue(
-                MessageTypeNames.Require(typeof(OrderAwaitingValidation)),
-                EShopServiceNames.Catalog));
+                EShopServiceNames.Catalog,
+                RabbitMqQueueLayout.Subscription,
+                MessageTypeNames.Require(typeof(OrderAwaitingValidation))));
     }
 
     [Fact]
