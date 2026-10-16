@@ -4,7 +4,7 @@ Event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on [Law
 
 | Pin | Version |
 |---|---|
-| LawnDart family | 0.6.0-alpha.1 |
+| LawnDart family | 0.6.0-alpha.2 |
 | Aspire (AppHost SDK and hosting) | 13.6.1 |
 | .NET SDK | 10.0.401 (`global.json`, roll forward to the latest feature band) |
 
@@ -30,7 +30,9 @@ The AppHost calls `WithManagementPlugin()` on `eventbus`. On the Aspire dashboar
 
 Sign in as `guest`. Aspire does not take a user name for this resource, so the user stays `guest`. The password is the generated parameter `eventbus-password`. The dashboard shows that parameter on the `eventbus` resource. The same password is in the `eventbus` connection string.
 
-A message that fails all 5 attempts is dead-lettered. The exchange is `{event-type}.dlx`. The queue is `{event-type}.{subscription}.dlq`. In the UI, open Queues and find that name. `order-paid` for Catalog is `order-paid.catalog.dlq`.
+A message that fails all 5 attempts is dead-lettered. The exchange is `{subscription}.dlx`. The queue is `{subscription}.dlq`. In the UI, open Queues and find that name. Catalog's dead-letter queue is `catalog.dlq`.
+
+Upgrading an existing broker: delete the old `eshop.*` queues, delete `eshop.integration` if that exchange is a topic, and delete the per-event queues and exchanges (`order-paid.catalog`, `order-paid.dlx`, and the rest). Or wipe the RabbitMQ volume and start again. RabbitMQ will not change an existing exchange from topic to direct.
 
 Seeded shoppers:
 

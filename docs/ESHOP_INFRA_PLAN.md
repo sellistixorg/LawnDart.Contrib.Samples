@@ -10,7 +10,7 @@ Hosting design for `src/dotnet-es-eshop`.
 
 - Aspire AppHost and ServiceDefaults (Aspire 13.6.1).
 - SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`), Redis, and RabbitMQ in the AppHost.
-- LawnDart packages pinned to `0.6.0-alpha.1`.
+- LawnDart packages pinned to `0.6.0-alpha.2`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.
 - SQL schema init on startup. `InitializeEShopLawnDartSqlAsync` calls the package `InitializeSchemaAsync`. LawnDart has no versioned migrator. Re-runs are idempotent DDL.
 - Per-service bounded-context hooks (`AddCatalogContext`, and the rest). The service `Program.cs` calls the hook. An assembly scan runs once there.
@@ -29,8 +29,8 @@ Original eShop uses RabbitMQ as the integration bus. This sample uses `LawnDart.
 1. Registration lives in `AddEShopLawnDart` and `AddEShopMessageTransport`.
 2. Publisher and consumer hosts register it from the Aspire `eventbus` connection: Basket, Catalog, Ordering, OrderProcessor, PaymentProcessor, and Webhooks. Identity has no eventbus reference and keeps the in-memory transport. WebApp registers the transport with subscription name `webapp` (`AddOrderStatusNotifications` calls `AddEShopMessageTransport(EShopServiceNames.WebApp)`). It subscribes to order status events only and has no SQL outbox or inbox.
 3. Publish goes through the SQL outbox. Consume goes through the SQL inbox.
-4. Subscription names are `basket`, `catalog`, `ordering`, `order-processor`, `payment-processor`, `webhooks`, and `webapp`. Every event type uses the direct exchange `eshop.integration`. The routing key is the event type name. The queue is `{event-type}.{subscription}`. `SetupTopology` is true, so host startup declares those queues for the message types the process records. Publish and subscribe still declare them on first use.
-5. A failed delivery waits on `{event-type}.{subscription}.retry` (default 5 seconds) and returns, up to 5 attempts. `DeadLetterFailedMessages` is true, so the last failure is dead-lettered. The dead-letter exchange is `{event-type}.dlx`. The dead-letter queue is `{event-type}.{subscription}.dlq`.
+4. Subscription names are `basket`, `catalog`, `ordering`, `order-processor`, `payment-processor`, `webhooks`, and `webapp`. Every event type uses the direct exchange `eshop.integration`. The routing key is the event type name. The queue name is the subscription name. `SetupTopology` is true, so host startup declares that queue and binds each recorded event type. Publish and subscribe still declare the same objects on first use. The default layout is one queue per subscription.
+5. A failed delivery waits on `{subscription}.retry` (default 5 seconds) and returns through `{subscription}.delay`, up to 5 attempts. `DeadLetterFailedMessages` is true, so the last failure is dead-lettered. The dead-letter exchange is `{subscription}.dlx`. The dead-letter queue is `{subscription}.dlq`. Catalog's dead-letter queue is `catalog.dlq`.
 6. `RabbitMqTransportSmokeTests` covers outbox publish through the package transport to a second subscription, reactor inbox dedupe, competing consumers on one queue, and a handler that fails every attempt until the message is dead-lettered. The test runs when RabbitMQ is reachable (`ESHOP_RABBITMQ`, or `amqp://guest:guest@127.0.0.1:5672`). Registration tests run without a broker. Set `ESHOP_REQUIRE_RABBITMQ=1` to fail that smoke test when the broker is down.
 
 ## Redis
@@ -61,7 +61,7 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 ## Out of scope for the host
 
-- Changing LawnDart product packages beyond the public `0.6.0-alpha.1` APIs.
+- Changing LawnDart product packages beyond the public `0.6.0-alpha.2` APIs.
 - Treating Redis as a LawnDart product store. Postgres is not used here. Azure Service Bus is not used here.
 
 ## Known gaps
@@ -76,6 +76,6 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 - Sample root: `src/dotnet-es-eshop/`
 - Event model: `docs/models/eshop/`
-- LawnDart packages: [nuget.org/packages/LawnDart](https://www.nuget.org/packages/LawnDart) at `0.6.0-alpha.1`
+- LawnDart packages: [nuget.org/packages/LawnDart](https://www.nuget.org/packages/LawnDart) at `0.6.0-alpha.2`
 - Upstream shape: [dotnet/eShop](https://github.com/dotnet/eShop)
 - WebApp screen rule: `.cursor/rules/eshop-webapp.mdc`

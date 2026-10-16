@@ -44,8 +44,11 @@ public class WhenPaymentFailedRegistrationTests
         Assert.Single(reactors);
         Assert.Equal("payment-failed", MessageTypeNames.Require(typeof(PaymentFailed)));
         Assert.Equal(
-            "payment-failed.ordering",
-            RabbitMqNames.Queue(MessageTypeNames.Require(typeof(PaymentFailed)), EShopServiceNames.Ordering));
+            EShopServiceNames.Ordering,
+            RabbitMqNames.Queue(
+                EShopServiceNames.Ordering,
+                RabbitMqQueueLayout.Subscription,
+                MessageTypeNames.Require(typeof(PaymentFailed))));
     }
 
     [Fact]

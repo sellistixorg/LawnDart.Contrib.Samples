@@ -40,8 +40,11 @@ public class WhenOrderPaidDeductStockRegistrationTests
         Assert.Single(reactors);
         Assert.Equal("order-paid", MessageTypeNames.Require(typeof(OrderPaid)));
         Assert.Equal(
-            "order-paid.catalog",
-            RabbitMqNames.Queue(MessageTypeNames.Require(typeof(OrderPaid)), EShopServiceNames.Catalog));
+            EShopServiceNames.Catalog,
+            RabbitMqNames.Queue(
+                EShopServiceNames.Catalog,
+                RabbitMqQueueLayout.Subscription,
+                MessageTypeNames.Require(typeof(OrderPaid))));
     }
 
     [Fact]

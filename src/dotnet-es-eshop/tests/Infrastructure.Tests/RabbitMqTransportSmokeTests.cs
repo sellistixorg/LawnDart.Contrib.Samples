@@ -170,10 +170,10 @@ public class RabbitMqTransportSmokeTests
         var id = Guid.NewGuid();
         await PublishOutboxAsync(transport, id, DateTime.UtcNow);
 
-        var deadLetterQueue = RabbitMqNames.DeadLetterQueue(EventName, subscription);
-        var deadLetterExchange = RabbitMqNames.DeadLetterExchange(EventName);
-        Assert.Equal(EventName + "." + subscription + ".dlq", deadLetterQueue);
-        Assert.Equal(EventName + ".dlx", deadLetterExchange);
+        var deadLetterQueue = RabbitMqNames.DeadLetterQueue(subscription);
+        var deadLetterExchange = RabbitMqNames.DeadLetterExchange(subscription);
+        Assert.Equal(subscription + ".dlq", deadLetterQueue);
+        Assert.Equal(subscription + ".dlx", deadLetterExchange);
 
         var body = await broker.WaitForMessageAsync(deadLetterQueue, TimeSpan.FromSeconds(15));
         var message = JsonSerializer.Deserialize<SampleCatalogItemAdded>(body, MessagingJson.Options);
@@ -213,7 +213,9 @@ public class RabbitMqTransportSmokeTests
         builder.Services.AddReactor<RecordingReactor, SampleCatalogItemAdded>();
         using var host = builder.Build();
         await host.StartAsync();
-        await WaitForQueueAsync(broker, RabbitMqNames.Queue(EventName, consumerName));
+        await WaitForQueueAsync(
+            broker,
+            RabbitMqNames.Queue(consumerName, RabbitMqQueueLayout.Subscription, EventName));
 
         var outboxId = Guid.NewGuid();
         await PublishOutboxAsync(publisher.GetRequiredService<IMessageTransport>(), Guid.NewGuid(), DateTime.UtcNow, outboxId);
@@ -412,11 +414,13 @@ public class RabbitMqTransportSmokeTests
                 var factory = new ConnectionFactory { Uri = new Uri(_uri) };
                 await using var connection = await factory.CreateConnectionAsync();
                 await using var channel = await connection.CreateChannelAsync();
-                await channel.QueueDeleteAsync(RabbitMqNames.Queue(EventName, subscriptionName));
-                await channel.QueueDeleteAsync(RabbitMqNames.RetryQueue(EventName, subscriptionName));
-                await channel.QueueDeleteAsync(RabbitMqNames.DeadLetterQueue(EventName, subscriptionName));
-                await channel.ExchangeDeleteAsync(RabbitMqNames.DelayExchange(EventName, subscriptionName));
-                await channel.ExchangeDeleteAsync(RabbitMqNames.DeadLetterExchange(EventName));
+                await channel.QueueDeleteAsync(
+                    RabbitMqNames.Queue(subscriptionName, RabbitMqQueueLayout.Subscription, EventName));
+                await channel.QueueDeleteAsync(RabbitMqNames.RetryQueue(subscriptionName));
+                await channel.QueueDeleteAsync(RabbitMqNames.DeadLetterQueue(subscriptionName));
+                await channel.ExchangeDeleteAsync(RabbitMqNames.RetryExchange(subscriptionName));
+                await channel.ExchangeDeleteAsync(RabbitMqNames.DelayExchange(subscriptionName));
+                await channel.ExchangeDeleteAsync(RabbitMqNames.DeadLetterExchange(subscriptionName));
                 await channel.ExchangeDeleteAsync(exchange);
             }
             catch (Exception)

@@ -44,14 +44,16 @@ Topology:
 
 - Direct exchange `eshop.integration` (`SharedTopicMapper`)
 - Routing key is the event type name
-- One quorum queue per event type and subscription: `{event-type}.{subscription}`
-- Subscription names are `basket`, `catalog`, `ordering`, `order-processor`, `payment-processor`, `webhooks`, and `webapp`
-- Instances of one service share that subscription, so they compete for each event queue
-- A second service has its own queues and receives its own copy
+- One quorum queue per subscription. The queue name is the subscription name: `basket`, `catalog`, `ordering`, `order-processor`, `payment-processor`, `webhooks`, `webapp`
+- That queue is bound once for each event type the service handles
+- Instances of one service share that queue, so they compete for its messages
+- A second service has its own queue and receives its own copy
 
-`SetupTopology` is true. Host startup declares the exchange and the queues for message types this process records. Publish and subscribe declare the same objects on first use. Identity keeps InMemory.
+`SetupTopology` is true. Host startup declares the exchange and that service's queue for the message types this process records. Publish and subscribe declare the same objects on first use. Identity keeps InMemory. The default queue layout is one queue per subscription. This host does not set QueueLayout.
 
-A failed delivery waits on the retry queue `{event-type}.{subscription}.retry`, then returns to the same queue. The wait defaults to 5 seconds. The handler may run 5 times. After the last failure the message is dead-lettered. The dead-letter exchange is `{event-type}.dlx`. The dead-letter queue is `{event-type}.{subscription}.dlq`.
+A failed delivery waits on `{subscription}.retry` (default 5 seconds), then returns through `{subscription}.delay`. The handler may run 5 times. After the last failure the message is dead-lettered. The dead-letter exchange is `{subscription}.dlx`. The dead-letter queue is `{subscription}.dlq`. Catalog's dead-letter queue is `catalog.dlq`.
+
+Catalog's queues are `catalog`, `catalog.retry`, and `catalog.dlq`. The matching exchanges are `catalog.retry`, `catalog.delay`, and `catalog.dlx`, plus the shared exchange `eshop.integration`.
 
 The SQL outbox is the publish path. The SQL inbox is the consume path for reactors.
 

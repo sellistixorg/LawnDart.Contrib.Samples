@@ -41,10 +41,11 @@ public class TranslateGatewaySucceededRegistrationTests
             "payment-gateway-charge-succeeded",
             MessageTypeNames.Require(typeof(PaymentGatewayChargeSucceeded)));
         Assert.Equal(
-            "payment-gateway-charge-succeeded.payment-processor",
+            EShopServiceNames.PaymentProcessor,
             RabbitMqNames.Queue(
-                MessageTypeNames.Require(typeof(PaymentGatewayChargeSucceeded)),
-                EShopServiceNames.PaymentProcessor));
+                EShopServiceNames.PaymentProcessor,
+                RabbitMqQueueLayout.Subscription,
+                MessageTypeNames.Require(typeof(PaymentGatewayChargeSucceeded))));
     }
 
     [Fact]

@@ -3,7 +3,7 @@ namespace LawnDart.Samples.EShop.Infrastructure;
 /// <summary>
 /// Subscription names for the RabbitMQ transport.
 /// Instances of the same service share a name. Different services do not.
-/// Each event type gets its own queue, named with the event type and this subscription.
+/// Each name is one quorum queue. The service binds that queue to each event type it handles.
 /// </summary>
 public static class EShopServiceNames
 {

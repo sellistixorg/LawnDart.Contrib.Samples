@@ -44,10 +44,11 @@ public class WhenOrderStatusStockConfirmedRegistrationTests
             MessageTypeNames.Require(typeof(OrderStatusStockConfirmed)));
         Assert.NotEqual("order-stock-confirmed", MessageTypeNames.Require(typeof(OrderStatusStockConfirmed)));
         Assert.Equal(
-            "order-status-stock-confirmed.payment-processor",
+            EShopServiceNames.PaymentProcessor,
             RabbitMqNames.Queue(
-                MessageTypeNames.Require(typeof(OrderStatusStockConfirmed)),
-                EShopServiceNames.PaymentProcessor));
+                EShopServiceNames.PaymentProcessor,
+                RabbitMqQueueLayout.Subscription,
+                MessageTypeNames.Require(typeof(OrderStatusStockConfirmed))));
     }
 
     [Fact]
