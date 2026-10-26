@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using LawnDart.Messaging.SqlServer;
 using LawnDart.Outbox;
 using LawnDart.Projections.Lightweight;
+using LawnDart.Projections.Lightweight.SqlServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

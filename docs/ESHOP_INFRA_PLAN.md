@@ -10,7 +10,7 @@ Hosting design for `src/dotnet-es-eshop`.
 
 - Aspire AppHost and ServiceDefaults (Aspire 13.6.1).
 - SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`), Redis, and RabbitMQ in the AppHost.
-- LawnDart packages pinned to `0.6.0-alpha.2`.
+- LawnDart packages pinned to `0.7.0-alpha.3`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.
 - SQL schema init on startup. `InitializeEShopLawnDartSqlAsync` calls the package `InitializeSchemaAsync`. LawnDart has no versioned migrator. Re-runs are idempotent DDL.
 - Per-service bounded-context hooks (`AddCatalogContext`, and the rest). The service `Program.cs` calls the hook. An assembly scan runs once there.
@@ -61,7 +61,7 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 ## Out of scope for the host
 
-- Changing LawnDart product packages beyond the public `0.6.0-alpha.2` APIs.
+- Changing LawnDart product packages beyond the public `0.7.0-alpha.3` APIs.
 - Treating Redis as a LawnDart product store. Postgres is not used here. Azure Service Bus is not used here.
 
 ## Known gaps
@@ -76,6 +76,6 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 - Sample root: `src/dotnet-es-eshop/`
 - Event model: `docs/models/eshop/`
-- LawnDart packages: [nuget.org/packages/LawnDart](https://www.nuget.org/packages/LawnDart) at `0.6.0-alpha.2`
+- LawnDart packages: [nuget.org/packages/LawnDart](https://www.nuget.org/packages/LawnDart) at `0.7.0-alpha.3`
 - Upstream shape: [dotnet/eShop](https://github.com/dotnet/eShop)
 - WebApp screen rule: `.cursor/rules/eshop-webapp.mdc`
