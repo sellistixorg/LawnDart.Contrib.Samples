@@ -57,17 +57,22 @@ public class EShopHostScopeValidationTests
     public void Catalog_api_resolves_hosted_services(EShopDatabase database) =>
         AssertHostedServices(BuildCatalog(database), database);
 
-    [Fact]
-    public void Identity_api_resolves_hosted_services() =>
-        AssertHostedServices(BuildIdentity(EShopDatabase.SqlServer), EShopDatabase.SqlServer);
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Identity_api_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildIdentity(database), database);
 
-    [Fact]
-    public void Identity_api_on_postgres_stops_with_a_clear_message()
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer, "Microsoft.EntityFrameworkCore.SqlServer")]
+    [InlineData(EShopDatabase.Postgres, "Npgsql.EntityFrameworkCore.PostgreSQL")]
+    public void Identity_api_login_store_uses_the_matching_provider(EShopDatabase database, string providerName)
     {
-        var ex = Assert.Throws<InvalidOperationException>(() => BuildIdentity(EShopDatabase.Postgres));
+        using var host = BuildIdentity(database);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        Assert.Contains("Identity login store", ex.Message, StringComparison.Ordinal);
-        Assert.Contains(EShopDatabaseSetting.ConfigurationKey, ex.Message, StringComparison.Ordinal);
+        Assert.Equal(providerName, db.Database.ProviderName);
     }
 
     [Theory]

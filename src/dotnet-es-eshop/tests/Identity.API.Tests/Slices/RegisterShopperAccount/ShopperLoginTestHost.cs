@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace LawnDart.Samples.EShop.Identity.API.Tests.Slices.RegisterShopperAccount;
 
 /// <summary>
-/// SQLite stand-in for the SQL Server login store. Unit tests do not start Docker.
+/// SQLite stand-in for the SQL Server or Postgres login store. Unit tests do not start Docker.
 /// </summary>
 internal sealed class ShopperLoginTestHost : IAsyncDisposable
 {

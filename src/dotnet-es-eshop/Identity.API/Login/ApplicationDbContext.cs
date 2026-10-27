@@ -11,7 +11,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// <summary>
     /// Creates the context.
     /// </summary>
-    /// <param name="options">SQL Server options for <c>identitylogindb</c>.</param>
+    /// <param name="options">SQL Server or Postgres options for <c>identitylogindb</c>.</param>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {

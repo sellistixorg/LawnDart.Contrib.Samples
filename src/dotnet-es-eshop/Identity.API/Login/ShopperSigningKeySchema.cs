@@ -7,6 +7,36 @@ namespace LawnDart.Samples.EShop.Identity.API.Login;
 /// </summary>
 public static class ShopperSigningKeySchema
 {
+    private const string SqlServerSql =
+        """
+        IF OBJECT_ID(N'dbo.ShopperSigningKeys', N'U') IS NULL
+        CREATE TABLE dbo.ShopperSigningKeys (
+            Id nvarchar(64) NOT NULL CONSTRAINT PK_ShopperSigningKeys PRIMARY KEY,
+            Pkcs8PrivateKey varbinary(max) NOT NULL,
+            CreatedAtUtc datetime2 NOT NULL
+        );
+        """;
+
+    // Npgsql creates tables with quoted names, so the names here are quoted too.
+    // CreatedAtUtc is a timestamp with time zone, which is how Npgsql stores a UTC DateTime.
+    private const string PostgresSql =
+        """
+        CREATE TABLE IF NOT EXISTS "ShopperSigningKeys" (
+            "Id" character varying(64) NOT NULL CONSTRAINT "PK_ShopperSigningKeys" PRIMARY KEY,
+            "Pkcs8PrivateKey" bytea NOT NULL,
+            "CreatedAtUtc" timestamp with time zone NOT NULL
+        );
+        """;
+
+    private const string SqliteSql =
+        """
+        CREATE TABLE IF NOT EXISTS ShopperSigningKeys (
+            Id TEXT NOT NULL CONSTRAINT PK_ShopperSigningKeys PRIMARY KEY,
+            Pkcs8PrivateKey BLOB NOT NULL,
+            CreatedAtUtc TEXT NOT NULL
+        );
+        """;
+
     /// <summary>
     /// Creates the table when it is missing. A second call changes nothing.
     /// </summary>
@@ -16,7 +46,7 @@ public static class ShopperSigningKeySchema
     /// <remarks>
     /// <c>EnsureCreated</c> skips schema creation when the database already has tables.
     /// SQL Server checks <c>OBJECT_ID</c> before <c>CREATE TABLE</c>.
-    /// SQLite uses <c>CREATE TABLE IF NOT EXISTS</c>.
+    /// Postgres and SQLite use <c>CREATE TABLE IF NOT EXISTS</c>.
     /// </remarks>
     public static async Task AddMissingAsync(
         ApplicationDbContext db,
@@ -25,36 +55,28 @@ public static class ShopperSigningKeySchema
         ArgumentNullException.ThrowIfNull(db);
 
         var provider = db.Database.ProviderName ?? "";
-        if (provider.Contains("SqlServer", StringComparison.OrdinalIgnoreCase))
-        {
-            const string sql =
-                """
-                IF OBJECT_ID(N'dbo.ShopperSigningKeys', N'U') IS NULL
-                CREATE TABLE dbo.ShopperSigningKeys (
-                    Id nvarchar(64) NOT NULL CONSTRAINT PK_ShopperSigningKeys PRIMARY KEY,
-                    Pkcs8PrivateKey varbinary(max) NOT NULL,
-                    CreatedAtUtc datetime2 NOT NULL
-                );
-                """;
-            await db.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
-            return;
-        }
+        var sql = SqlFor(provider)
+            ?? throw new InvalidOperationException(
+                "Shopper signing keys are not set up for provider '" + provider + "'.");
+        await db.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
+    }
 
-        if (provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
-        {
-            const string sql =
-                """
-                CREATE TABLE IF NOT EXISTS ShopperSigningKeys (
-                    Id TEXT NOT NULL CONSTRAINT PK_ShopperSigningKeys PRIMARY KEY,
-                    Pkcs8PrivateKey BLOB NOT NULL,
-                    CreatedAtUtc TEXT NOT NULL
-                );
-                """;
-            await db.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
-            return;
-        }
+    /// <summary>
+    /// Returns the statement that creates the table for <paramref name="providerName"/>,
+    /// or <see langword="null"/> when the provider is not SQL Server, Postgres, or SQLite.
+    /// </summary>
+    /// <param name="providerName">The Entity Framework Core provider name, from <c>Database.ProviderName</c>.</param>
+    /// <returns>The statement, or <see langword="null"/>.</returns>
+    public static string? SqlFor(string providerName)
+    {
+        ArgumentNullException.ThrowIfNull(providerName);
 
-        throw new InvalidOperationException(
-            "Shopper signing keys are not set up for provider '" + provider + "'.");
+        if (providerName.Contains("SqlServer", StringComparison.OrdinalIgnoreCase))
+            return SqlServerSql;
+        if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+            return PostgresSql;
+        if (providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+            return SqliteSql;
+        return null;
     }
 }
