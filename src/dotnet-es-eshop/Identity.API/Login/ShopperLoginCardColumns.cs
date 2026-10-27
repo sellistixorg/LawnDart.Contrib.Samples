@@ -10,12 +10,17 @@ public static class ShopperLoginCardColumns
 {
     private static readonly CardColumn[] Columns =
     [
-        new("CardHolderName", "nvarchar(max)", "TEXT"),
-        new("CardNumber", "nvarchar(max)", "TEXT"),
-        new("CardType", "int", "INTEGER"),
-        new("Expiration", "nvarchar(max)", "TEXT"),
-        new("SecurityNumber", "nvarchar(max)", "TEXT")
+        new("CardHolderName", "nvarchar(max)", "text", "TEXT"),
+        new("CardNumber", "nvarchar(max)", "text", "TEXT"),
+        new("CardType", "int", "integer", "INTEGER"),
+        new("Expiration", "nvarchar(max)", "text", "TEXT"),
+        new("SecurityNumber", "nvarchar(max)", "text", "TEXT")
     ];
+
+    /// <summary>
+    /// Names of the card columns, in the order they are added.
+    /// </summary>
+    public static IReadOnlyList<string> ColumnNames { get; } = Columns.Select(column => column.Name).ToArray();
 
     /// <summary>
     /// Adds each card column that is not already on <c>AspNetUsers</c>.
@@ -26,6 +31,7 @@ public static class ShopperLoginCardColumns
     /// <returns>A task that completes when every card column is present.</returns>
     /// <remarks>
     /// SQL Server uses <c>COL_LENGTH</c> before <c>ALTER TABLE ADD</c>.
+    /// Postgres uses <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>.
     /// SQLite checks <c>pragma_table_info</c> and then adds the column.
     /// The columns stay nullable. They are not written to events.
     /// </remarks>
@@ -36,15 +42,11 @@ public static class ShopperLoginCardColumns
         ArgumentNullException.ThrowIfNull(db);
 
         var provider = db.Database.ProviderName ?? "";
-        if (provider.Contains("SqlServer", StringComparison.OrdinalIgnoreCase))
+        var statements = StatementsFor(provider);
+        if (statements is not null)
         {
-            foreach (var column in Columns)
-            {
-                var sql =
-                    "IF COL_LENGTH('dbo.AspNetUsers', '" + column.Name + "') IS NULL " +
-                    "ALTER TABLE dbo.AspNetUsers ADD " + column.Name + " " + column.SqlServerType + " NULL;";
+            foreach (var sql in statements)
                 await db.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
-            }
 
             return;
         }
@@ -65,6 +67,42 @@ public static class ShopperLoginCardColumns
 
         throw new InvalidOperationException(
             "Login card columns are not set up for provider '" + provider + "'.");
+    }
+
+    /// <summary>
+    /// Returns the statements that add the card columns for <paramref name="providerName"/>,
+    /// or <see langword="null"/> when the provider has no fixed statements.
+    /// </summary>
+    /// <param name="providerName">The Entity Framework Core provider name, from <c>Database.ProviderName</c>.</param>
+    /// <returns>One statement for each card column on SQL Server or Postgres. <see langword="null"/> for SQLite and other providers.</returns>
+    /// <remarks>
+    /// Each statement checks for the column first, so running all of them again changes nothing.
+    /// SQLite needs a lookup before each column, so it is handled in <see cref="AddMissingAsync"/>.
+    /// </remarks>
+    public static IReadOnlyList<string>? StatementsFor(string providerName)
+    {
+        ArgumentNullException.ThrowIfNull(providerName);
+
+        if (providerName.Contains("SqlServer", StringComparison.OrdinalIgnoreCase))
+        {
+            return Columns
+                .Select(column =>
+                    "IF COL_LENGTH('dbo.AspNetUsers', '" + column.Name + "') IS NULL " +
+                    "ALTER TABLE dbo.AspNetUsers ADD " + column.Name + " " + column.SqlServerType + " NULL;")
+                .ToArray();
+        }
+
+        if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+        {
+            // Npgsql creates the Identity tables with quoted names, so the names here are quoted too.
+            return Columns
+                .Select(column =>
+                    "ALTER TABLE \"AspNetUsers\" ADD COLUMN IF NOT EXISTS \"" + column.Name + "\" " +
+                    column.PostgresType + " NULL;")
+                .ToArray();
+        }
+
+        return null;
     }
 
     private static async Task<bool> SqliteHasColumnAsync(
@@ -95,5 +133,5 @@ public static class ShopperLoginCardColumns
         }
     }
 
-    private readonly record struct CardColumn(string Name, string SqlServerType, string SqliteType);
+    private readonly record struct CardColumn(string Name, string SqlServerType, string PostgresType, string SqliteType);
 }

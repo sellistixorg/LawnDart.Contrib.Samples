@@ -16,8 +16,9 @@ public static class ShopperLoginStoreRegistration
     /// Registers <see cref="ApplicationDbContext"/>, ASP.NET Core Identity, and <see cref="IShopperLoginStore"/>.
     /// </summary>
     /// <remarks>
-    /// The login store runs on SQL Server only. When <c>EShop:Database</c> is <c>Postgres</c>,
-    /// this method stops startup with a message instead of failing later on the first database call.
+    /// The <c>EShop:Database</c> setting picks the database, the same as for the LawnDart stores.
+    /// <c>SqlServer</c> (the default) uses the SQL Server provider. <c>Postgres</c> uses the Npgsql provider.
+    /// The login tables use the same names on both databases.
     /// </remarks>
     /// <param name="builder">Identity service host.</param>
     /// <typeparam name="TBuilder">Host application builder.</typeparam>
@@ -32,20 +33,22 @@ public static class ShopperLoginStoreRegistration
         {
             throw new InvalidOperationException(
                 $"Connection string '{EShopDatabases.IdentityLogin}' is missing. " +
-                "Start this service from the Aspire AppHost so the SQL database reference is injected.");
+                "Start this service from the Aspire AppHost so the database reference is injected.");
         }
 
         var database = builder.Configuration.ReadEShopDatabase();
-        if (database != EShopDatabase.SqlServer)
+        if (database == EShopDatabase.Postgres)
         {
-            throw new InvalidOperationException(
-                $"The Identity login store on '{EShopDatabases.IdentityLogin}' runs on SQL Server only for now. " +
-                $"'{EShopDatabaseSetting.ConfigurationKey}' is '{database}'. Start Identity.API with SqlServer.");
+            builder.AddNpgsqlDbContext<ApplicationDbContext>(
+                EShopDatabases.IdentityLogin,
+                configureDbContextOptions: options => options.EnableSensitiveDataLogging(false));
         }
-
-        builder.AddSqlServerDbContext<ApplicationDbContext>(
-            EShopDatabases.IdentityLogin,
-            configureDbContextOptions: options => options.EnableSensitiveDataLogging(false));
+        else
+        {
+            builder.AddSqlServerDbContext<ApplicationDbContext>(
+                EShopDatabases.IdentityLogin,
+                configureDbContextOptions: options => options.EnableSensitiveDataLogging(false));
+        }
 
         builder.Services
             .AddIdentity<ApplicationUser, IdentityRole>()
