@@ -3,6 +3,7 @@ using LawnDart.AspNetCore;
 using LawnDart.Samples.EShop.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
 builder.AddServiceDefaults();
 
@@ -10,7 +11,7 @@ builder.AddServiceDefaults();
 // One scan of this service assembly. Every Basket slice is included.
 var basketAssembly = Assembly.GetExecutingAssembly();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Basket,
+    EShopDatabases.Basket,
     context => context.AddBasketContext(basketAssembly),
     EShopServiceNames.Basket);
 builder.Services.AddEShopIdentityUrl(builder.Configuration);
@@ -20,7 +21,7 @@ builder.AddEShopSlices(basketAssembly);
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSqlAsync();
+await app.InitializeEShopLawnDartSchemaAsync();
 
 app.MapDefaultEndpoints();
 app.MapLawnDartCommands();

@@ -2,7 +2,9 @@ using System.Reflection;
 using LawnDart;
 using LawnDart.Aggregates;
 using LawnDart.AspNetCore;
+using LawnDart.EventSourcing.Postgres.EventStore;
 using LawnDart.EventSourcing.SqlServer;
+using LawnDart.EventSourcing.SqlServer.EventStore;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
@@ -32,35 +34,59 @@ public class EShopHostScopeValidationTests
     private const string SqlConnectionString =
         "Server=localhost;Database=eshop-wave1;User Id=sa;Password=placeholder;TrustServerCertificate=True";
 
+    private const string PostgresConnectionString =
+        "Host=localhost;Database=eshop-wave1;Username=postgres;Password=placeholder";
+
     private const string RabbitConnectionString = "amqp://guest:guest@localhost:5672";
 
-    [Fact]
-    public void Basket_api_resolves_hosted_services() =>
-        AssertHostedServices(BuildBasket());
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Basket_api_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildBasket(database), database);
 
-    [Fact]
-    public void Ordering_api_resolves_hosted_services() =>
-        AssertHostedServices(BuildOrdering());
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Ordering_api_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildOrdering(database), database);
 
-    [Fact]
-    public void Catalog_api_resolves_hosted_services() =>
-        AssertHostedServices(BuildCatalog());
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Catalog_api_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildCatalog(database), database);
 
     [Fact]
     public void Identity_api_resolves_hosted_services() =>
-        AssertHostedServices(BuildIdentity());
+        AssertHostedServices(BuildIdentity(EShopDatabase.SqlServer), EShopDatabase.SqlServer);
 
     [Fact]
-    public void Payment_processor_resolves_hosted_services() =>
-        AssertHostedServices(BuildPaymentProcessor());
+    public void Identity_api_on_postgres_stops_with_a_clear_message()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => BuildIdentity(EShopDatabase.Postgres));
 
-    [Fact]
-    public void Order_processor_resolves_hosted_services() =>
-        AssertHostedServices(BuildOrderProcessor());
+        Assert.Contains("Identity login store", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(EShopDatabaseSetting.ConfigurationKey, ex.Message, StringComparison.Ordinal);
+    }
 
-    [Fact]
-    public void Webhooks_api_resolves_hosted_services() =>
-        AssertHostedServices(BuildWebhooks());
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Payment_processor_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildPaymentProcessor(database), database);
+
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Order_processor_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildOrderProcessor(database), database);
+
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Webhooks_api_resolves_hosted_services(EShopDatabase database) =>
+        AssertHostedServices(BuildWebhooks(database), database);
 
     [Fact]
     public void Web_app_resolves_hosted_services() =>
@@ -80,13 +106,27 @@ public class EShopHostScopeValidationTests
         }
     }
 
-    private static WebApplication BuildBasket()
+    private static void AssertHostedServices(IHost host, EShopDatabase database)
+    {
+        using (host)
+        {
+            Assert.NotEmpty(host.Services.GetServices<IHostedService>().ToArray());
+
+            var store = host.Services.GetRequiredKeyedService<IEventStore>(EShopLawnDartHost.ContextName);
+            if (database == EShopDatabase.Postgres)
+                Assert.IsType<PostgresEventStore>(store);
+            else
+                Assert.IsType<SqlServerEventStore>(store);
+        }
+    }
+
+    private static WebApplication BuildBasket(EShopDatabase database)
     {
         var basketAssembly = typeof(ClearBasketWhenOrderStartedReactor).Assembly;
-        var builder = CreateWeb(EShopSqlConnections.Basket);
+        var builder = CreateWeb(database, EShopDatabases.Basket);
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Basket,
+            EShopDatabases.Basket,
             context => context.AddBasketContext(basketAssembly),
             EShopServiceNames.Basket);
         builder.Services.AddEShopIdentityUrl(builder.Configuration);
@@ -97,13 +137,13 @@ public class EShopHostScopeValidationTests
         return builder.Build();
     }
 
-    private static WebApplication BuildOrdering()
+    private static WebApplication BuildOrdering(EShopDatabase database)
     {
         var orderingAssembly = typeof(WhenPaymentSucceededReactor).Assembly;
-        var builder = CreateWeb(EShopSqlConnections.Ordering);
+        var builder = CreateWeb(database, EShopDatabases.Ordering);
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Ordering,
+            EShopDatabases.Ordering,
             context => context.AddOrderingContext(orderingAssembly, typeof(OrderStarted).Assembly),
             EShopServiceNames.Ordering);
         builder.Services.AddEShopIdentityUrl(builder.Configuration);
@@ -115,13 +155,13 @@ public class EShopHostScopeValidationTests
         return builder.Build();
     }
 
-    private static WebApplication BuildCatalog()
+    private static WebApplication BuildCatalog(EShopDatabase database)
     {
         var catalogAssembly = typeof(CatalogSeedStartup).Assembly;
-        var builder = CreateWeb(EShopSqlConnections.Catalog);
+        var builder = CreateWeb(database, EShopDatabases.Catalog);
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Catalog,
+            EShopDatabases.Catalog,
             context => context.AddCatalogContext(catalogAssembly, typeof(OrderStockConfirmed).Assembly),
             EShopServiceNames.Catalog);
         builder.Services.AddLawnDartHttpCommands(catalogAssembly);
@@ -131,14 +171,14 @@ public class EShopHostScopeValidationTests
         return builder.Build();
     }
 
-    private static WebApplication BuildIdentity()
+    private static WebApplication BuildIdentity(EShopDatabase database)
     {
         var identityAssembly = typeof(IdentitySeedStartup).Assembly;
-        var builder = CreateWeb(EShopSqlConnections.Identity, EShopSqlConnections.IdentityLogin);
+        var builder = CreateWeb(database, EShopDatabases.Identity, EShopDatabases.IdentityLogin);
         builder.AddServiceDefaults();
         builder.AddShopperLoginStore();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Identity,
+            EShopDatabases.Identity,
             context => context.AddIdentityContext(identityAssembly));
         builder.Services.AddIdentityDemoAuth(builder.Configuration);
         builder.Services.AddLawnDartHttpCommands(identityAssembly);
@@ -148,13 +188,13 @@ public class EShopHostScopeValidationTests
         return builder.Build();
     }
 
-    private static WebApplication BuildPaymentProcessor()
+    private static WebApplication BuildPaymentProcessor(EShopDatabase database)
     {
         var paymentAssembly = typeof(WhenOrderStatusStockConfirmedReactor).Assembly;
-        var builder = CreateWeb(EShopSqlConnections.Payment);
+        var builder = CreateWeb(database, EShopDatabases.Payment);
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Payment,
+            EShopDatabases.Payment,
             context => context.AddPaymentContext(paymentAssembly, typeof(OrderStarted).Assembly),
             EShopServiceNames.PaymentProcessor);
         builder.Services.AddEShopAutomationShell(EShopServiceNames.PaymentProcessor);
@@ -163,13 +203,13 @@ public class EShopHostScopeValidationTests
         return builder.Build();
     }
 
-    private static IHost BuildOrderProcessor()
+    private static IHost BuildOrderProcessor(EShopDatabase database)
     {
         var processorAssembly = typeof(TrackSubmittedOrderReactor).Assembly;
-        var builder = CreateWorker(EShopSqlConnections.Ordering);
+        var builder = CreateWorker(database, EShopDatabases.Ordering);
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Ordering,
+            EShopDatabases.Ordering,
             context => context.AddOrderProcessorContext(),
             EShopServiceNames.OrderProcessor,
             enableOutbox: false);
@@ -179,12 +219,12 @@ public class EShopHostScopeValidationTests
         return builder.Build();
     }
 
-    private static WebApplication BuildWebhooks()
+    private static WebApplication BuildWebhooks(EShopDatabase database)
     {
-        var builder = CreateWeb(EShopSqlConnections.Webhooks);
+        var builder = CreateWeb(database, EShopDatabases.Webhooks);
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Webhooks,
+            EShopDatabases.Webhooks,
             context => context.AddWebhooksContext(),
             EShopServiceNames.Webhooks);
         builder.Services.AddEShopIdentityUrl(builder.Configuration);
@@ -194,7 +234,7 @@ public class EShopHostScopeValidationTests
 
     private static WebApplication BuildWebApp()
     {
-        var builder = CreateWeb();
+        var builder = CreateWeb(EShopDatabase.SqlServer);
         builder.AddServiceDefaults();
         builder.Services.AddEShopStorefront(builder.Configuration);
         builder.Services.AddShopperAuthentication();
@@ -208,19 +248,19 @@ public class EShopHostScopeValidationTests
 
     private static WebApplication BuildWebhookClient()
     {
-        var builder = CreateWeb();
+        var builder = CreateWeb(EShopDatabase.SqlServer);
         builder.AddServiceDefaults();
         return builder.Build();
     }
 
-    private static WebApplicationBuilder CreateWeb(params string[] sqlNames)
+    private static WebApplicationBuilder CreateWeb(EShopDatabase database, params string[] databaseNames)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             EnvironmentName = Environments.Development,
             Args = []
         });
-        builder.Configuration.AddInMemoryCollection(Connections(sqlNames));
+        builder.Configuration.AddInMemoryCollection(Connections(database, databaseNames));
         builder.Host.UseDefaultServiceProvider((_, options) =>
         {
             options.ValidateScopes = true;
@@ -229,14 +269,14 @@ public class EShopHostScopeValidationTests
         return builder;
     }
 
-    private static HostApplicationBuilder CreateWorker(params string[] sqlNames)
+    private static HostApplicationBuilder CreateWorker(EShopDatabase database, params string[] databaseNames)
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
             EnvironmentName = Environments.Development,
             Args = []
         });
-        builder.Configuration.AddInMemoryCollection(Connections(sqlNames));
+        builder.Configuration.AddInMemoryCollection(Connections(database, databaseNames));
         builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions
         {
             ValidateScopes = true,
@@ -245,14 +285,18 @@ public class EShopHostScopeValidationTests
         return builder;
     }
 
-    private static Dictionary<string, string?> Connections(params string[] sqlNames)
+    private static Dictionary<string, string?> Connections(EShopDatabase database, params string[] databaseNames)
     {
         var values = new Dictionary<string, string?>
         {
+            [EShopDatabaseSetting.ConfigurationKey] = database.ToString(),
             [$"ConnectionStrings:{EShopLawnDartHost.EventBusConnectionName}"] = RabbitConnectionString
         };
-        foreach (var name in sqlNames)
-            values[$"ConnectionStrings:{name}"] = SqlConnectionString;
+        var connectionString = database == EShopDatabase.Postgres
+            ? PostgresConnectionString
+            : SqlConnectionString;
+        foreach (var name in databaseNames)
+            values[$"ConnectionStrings:{name}"] = connectionString;
         return values;
     }
 

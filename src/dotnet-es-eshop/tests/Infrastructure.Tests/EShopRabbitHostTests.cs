@@ -2,6 +2,7 @@ using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
 using LawnDart.Messaging.RabbitMQ;
 using LawnDart.Outbox;
+using LawnDart.Messaging.Postgres;
 using LawnDart.Messaging.SqlServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,9 @@ public class EShopRabbitHostTests
 {
     private const string SqlConnectionString =
         "Server=localhost;Database=eshop-wave2;User Id=sa;Password=placeholder;TrustServerCertificate=True";
+
+    private const string PostgresConnectionString =
+        "Host=localhost;Database=eshop-wave2;Username=postgres;Password=placeholder";
 
     private const string RabbitConnectionString = "amqp://guest:guest@localhost:5672";
 
@@ -33,19 +37,22 @@ public class EShopRabbitHostTests
             new SharedTopicMapper(EShopLawnDartHost.IntegrationExchangeName).TopicFor(token));
     }
 
-    [Fact]
-    public void Rabbit_host_keeps_sql_inbox_and_outbox_publisher()
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Rabbit_host_keeps_database_inbox_and_outbox_publisher(EShopDatabase database)
     {
-        var builder = CreateBuilder();
+        var builder = CreateBuilder(database);
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Catalog,
+            EShopDatabases.Catalog,
             context => context.AddCatalogContext(),
             EShopServiceNames.Catalog);
 
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(RabbitMqMessageTransport));
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(IMessageTransport));
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(IMessageTopologySetup));
-        Assert.Contains(builder.Services, d => d.ServiceType == typeof(SqlServerInboxStore));
+        var inboxType = database == EShopDatabase.Postgres ? typeof(PostgresInboxStore) : typeof(SqlServerInboxStore);
+        Assert.Contains(builder.Services, d => d.ServiceType == inboxType);
         Assert.Contains(builder.Services, d => d.ServiceType == typeof(IOutboxPublisher));
         Assert.DoesNotContain(builder.Services, d => d.ServiceType == typeof(InMemoryMessageTransport));
 
@@ -62,6 +69,7 @@ public class EShopRabbitHostTests
             EShopLawnDartHost.IntegrationExchangeName,
             options.TopicMapper.TopicFor("order-paid"));
         Assert.IsType<RabbitMqMessageTransport>(provider.GetRequiredService<IMessageTransport>());
+        Assert.IsType(inboxType, provider.GetRequiredService<IInboxStore>());
     }
 
     [Fact]
@@ -70,12 +78,12 @@ public class EShopRabbitHostTests
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            [$"ConnectionStrings:{EShopSqlConnections.Catalog}"] = SqlConnectionString
+            [$"ConnectionStrings:{EShopDatabases.Catalog}"] = SqlConnectionString
         });
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
             builder.AddEShopLawnDart(
-                EShopSqlConnections.Catalog,
+                EShopDatabases.Catalog,
                 context => context.AddCatalogContext(),
                 EShopServiceNames.Catalog));
 
@@ -88,10 +96,10 @@ public class EShopRabbitHostTests
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            [$"ConnectionStrings:{EShopSqlConnections.Catalog}"] = SqlConnectionString
+            [$"ConnectionStrings:{EShopDatabases.Catalog}"] = SqlConnectionString
         });
         builder.AddEShopLawnDart(
-            EShopSqlConnections.Catalog,
+            EShopDatabases.Catalog,
             context => context.AddCatalogContext());
 
         Assert.DoesNotContain(builder.Services, d => d.ServiceType == typeof(RabbitMqMessageTransport));
@@ -128,12 +136,15 @@ public class EShopRabbitHostTests
         Assert.Equal("00-abc-def-01", restored.Headers["traceparent"]);
     }
 
-    private static HostApplicationBuilder CreateBuilder()
+    private static HostApplicationBuilder CreateBuilder(EShopDatabase database)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            [$"ConnectionStrings:{EShopSqlConnections.Catalog}"] = SqlConnectionString,
+            [EShopDatabaseSetting.ConfigurationKey] = database.ToString(),
+            [$"ConnectionStrings:{EShopDatabases.Catalog}"] = database == EShopDatabase.Postgres
+                ? PostgresConnectionString
+                : SqlConnectionString,
             [$"ConnectionStrings:{EShopLawnDartHost.EventBusConnectionName}"] = RabbitConnectionString
         });
         return builder;

@@ -3,6 +3,7 @@ using LawnDart.Samples.EShop.Infrastructure;
 using LawnDart.Samples.EShop.Shared.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
 builder.AddServiceDefaults();
 
@@ -12,7 +13,7 @@ builder.AddServiceDefaults();
 // Payment runs from integration events. View routes are the HTTP surface on this host.
 var paymentAssembly = Assembly.GetExecutingAssembly();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Payment,
+    EShopDatabases.Payment,
     context => context.AddPaymentContext(paymentAssembly, typeof(OrderStarted).Assembly),
     EShopServiceNames.PaymentProcessor);
 builder.Services.AddEShopAutomationShell(EShopServiceNames.PaymentProcessor);
@@ -20,7 +21,7 @@ builder.AddEShopSlices(paymentAssembly);
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSqlAsync();
+await app.InitializeEShopLawnDartSchemaAsync();
 
 app.MapDefaultEndpoints();
 app.MapEShopSlices(paymentAssembly);

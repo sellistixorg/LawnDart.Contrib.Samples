@@ -35,7 +35,7 @@ Example: `Ordering.API/Slices/MarkOrderStockConfirmed/Order.MarkOrderStockConfir
 
 ## Host wiring
 
-Service hosts call `AddEShopLawnDart` and `InitializeEShopLawnDartSqlAsync`. RabbitMQ topology setup runs when the host starts (`SetupTopology`). Leave the Aspire graph as it is.
+Service hosts call `AddEShopLawnDart` and `InitializeEShopLawnDartSchemaAsync`. RabbitMQ topology setup runs when the host starts (`SetupTopology`). Leave the Aspire graph as it is.
 
 `WithEventTypes` and `WithCommandHandlers` scan an assembly. `AddLawnDartHttpCommands` does too. Each service calls each of those once, from that service's `Program.cs`, or from the context hook `Program.cs` calls. Pass the service assembly. Every slice in that assembly is included.
 

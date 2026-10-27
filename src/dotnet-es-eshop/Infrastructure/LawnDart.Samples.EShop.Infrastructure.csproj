@@ -10,12 +10,15 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="LawnDart" />
     <PackageReference Include="LawnDart.EventSourcing" />
+    <PackageReference Include="LawnDart.EventSourcing.Postgres" />
     <PackageReference Include="LawnDart.EventSourcing.SqlServer" />
     <PackageReference Include="LawnDart.Messaging" />
     <PackageReference Include="LawnDart.Messaging.InMemory" />
+    <PackageReference Include="LawnDart.Messaging.Postgres" />
     <PackageReference Include="LawnDart.Messaging.RabbitMQ" />
     <PackageReference Include="LawnDart.Messaging.SqlServer" />
     <PackageReference Include="LawnDart.Projections.Lightweight" />
+    <PackageReference Include="LawnDart.Projections.Lightweight.Postgres" />
     <PackageReference Include="LawnDart.Projections.Lightweight.SqlServer" />
   </ItemGroup>
 </Project>

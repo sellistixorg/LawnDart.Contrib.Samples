@@ -5,6 +5,7 @@ using LawnDart.Samples.EShop.Identity.API.Seed;
 using LawnDart.Samples.EShop.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
 builder.AddServiceDefaults();
 
@@ -14,7 +15,7 @@ builder.AddServiceDefaults();
 var identityAssembly = Assembly.GetExecutingAssembly();
 builder.AddShopperLoginStore();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Identity,
+    EShopDatabases.Identity,
     context => context.AddIdentityContext(identityAssembly));
 builder.Services.AddIdentityDemoAuth(builder.Configuration);
 builder.Services.AddLawnDartHttpCommands(identityAssembly);
@@ -24,7 +25,7 @@ builder.AddIdentitySeed();
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSqlAsync();
+await app.InitializeEShopLawnDartSchemaAsync();
 await app.InitializeShopperLoginStoreAsync();
 
 app.MapDefaultEndpoints();

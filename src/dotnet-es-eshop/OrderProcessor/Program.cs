@@ -2,6 +2,7 @@ using System.Reflection;
 using LawnDart.Samples.EShop.Infrastructure;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
 builder.AddServiceDefaults();
 
@@ -10,7 +11,7 @@ builder.AddServiceDefaults();
 // One scan of this service assembly. Every OrderProcessor slice is included.
 var processorAssembly = Assembly.GetExecutingAssembly();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Ordering,
+    EShopDatabases.Ordering,
     context => context.AddOrderProcessorContext(),
     EShopServiceNames.OrderProcessor,
     enableOutbox: false);
@@ -19,6 +20,6 @@ builder.AddEShopSlices(processorAssembly);
 
 var host = builder.Build();
 
-await host.InitializeEShopLawnDartSqlAsync();
+await host.InitializeEShopLawnDartSchemaAsync();
 
 host.Run();

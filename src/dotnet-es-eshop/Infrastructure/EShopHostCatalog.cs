@@ -15,8 +15,8 @@ public static class EShopHostCatalog
 }
 
 /// <summary>
-/// Lets a service start and create SQL tables before any slice registers events.
-/// LawnDart resolves the SQL event store only after <c>WithEventTypes</c>.
+/// Lets a service start and create its database tables before any slice registers events.
+/// LawnDart resolves the event store only after <c>WithEventTypes</c>.
 /// A hook that calls <c>WithEventTypes</c> supplies the catalog, and this type is not registered.
 /// </summary>
 [EventTypeName(EShopHostCatalog.ReadyToken)]

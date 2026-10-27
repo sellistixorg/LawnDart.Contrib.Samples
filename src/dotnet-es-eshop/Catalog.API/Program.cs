@@ -5,6 +5,7 @@ using LawnDart.Samples.EShop.Infrastructure;
 using LawnDart.Samples.EShop.Shared.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
 builder.AddServiceDefaults();
 
@@ -13,7 +14,7 @@ builder.AddServiceDefaults();
 // Shared supplies integration events so the outbox can publish their tokens.
 var catalogAssembly = Assembly.GetExecutingAssembly();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Catalog,
+    EShopDatabases.Catalog,
     context => context.AddCatalogContext(catalogAssembly, typeof(OrderStockConfirmed).Assembly),
     EShopServiceNames.Catalog);
 
@@ -23,7 +24,7 @@ builder.AddCatalogSeed();
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSqlAsync();
+await app.InitializeEShopLawnDartSchemaAsync();
 
 app.MapDefaultEndpoints();
 app.MapLawnDartCommands();

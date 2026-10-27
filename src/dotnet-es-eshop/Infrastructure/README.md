@@ -4,19 +4,19 @@ Shared LawnDart host registration for eShop services that own an Aspire SQL data
 
 ## Register
 
-Call `AddEShopLawnDart` from the service host. Pass the Aspire SQL connection name (`catalogdb`, `basketdb`, and the other names in `EShopSqlConnections`). Pass the service hook (`AddCatalogContext`, and the rest). Pass a subscription name from `EShopServiceNames` when the host has the Aspire `eventbus` reference.
+Call `AddEShopLawnDart` from the service host. Pass the Aspire SQL connection name (`catalogdb`, `basketdb`, and the other names in `EShopDatabases`). Pass the service hook (`AddCatalogContext`, and the rest). Pass a subscription name from `EShopServiceNames` when the host has the Aspire `eventbus` reference.
 
-Call `InitializeEShopLawnDartSqlAsync` after `Build` and before the host runs. That calls LawnDart `InitializeSchemaAsync` for the event log, transactional outbox, view store, checkpoints, and durable inbox. The calls are idempotent. LawnDart has no versioned migrator.
+Call `InitializeEShopLawnDartSchemaAsync` after `Build` and before the host runs. That calls LawnDart `InitializeSchemaAsync` for the event log, transactional outbox, view store, checkpoints, and durable inbox. The calls are idempotent. LawnDart has no versioned migrator.
 
 ```csharp
 builder.AddServiceDefaults();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Catalog,
+    EShopDatabases.Catalog,
     context => context.AddCatalogContext(),
     EShopServiceNames.Catalog);
 
 var app = builder.Build();
-await app.InitializeEShopLawnDartSqlAsync();
+await app.InitializeEShopLawnDartSchemaAsync();
 app.MapDefaultEndpoints();
 app.Run();
 ```

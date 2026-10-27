@@ -4,10 +4,11 @@ using LawnDart.Projections.Storage;
 namespace LawnDart.Samples.EShop.OrderProcessor.Slices.ConfirmGracePeriod;
 
 /// <summary>
-/// Orders waiting out the grace period, stored as SQL views and fed by Order Started.
+/// Orders waiting out the grace period, stored as LawnDart views and fed by Order Started.
 /// </summary>
 /// <remarks>
-/// Rows use view type <see cref="ViewType"/> in <c>dbo.ProjectionViews</c>.
+/// Rows use view type <see cref="ViewType"/> in the LawnDart view table
+/// (<c>dbo.ProjectionViews</c> on SQL Server, <c>lawndart.projection_views</c> on Postgres).
 /// Ordering projections use other type names in that table.
 /// The first Order Started time is kept. A redelivery does not move the clock.
 /// A successful publish deletes the row.
