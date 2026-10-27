@@ -4,7 +4,7 @@ Event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on [Law
 
 | Pin | Version |
 |---|---|
-| LawnDart family | 0.6.0-alpha.2 |
+| LawnDart family | 0.7.0-alpha.3 |
 | Aspire (AppHost SDK and hosting) | 13.6.1 |
 | .NET SDK | 10.0.401 (`global.json`, roll forward to the latest feature band) |
 

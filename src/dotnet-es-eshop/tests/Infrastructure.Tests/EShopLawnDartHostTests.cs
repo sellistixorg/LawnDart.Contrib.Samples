@@ -9,6 +9,7 @@ using LawnDart.Messaging.Outbox;
 using LawnDart.Messaging.SqlServer;
 using LawnDart.Outbox;
 using LawnDart.Projections.Checkpoints;
+using LawnDart.Projections.Lightweight.SqlServer;
 using LawnDart.Projections.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

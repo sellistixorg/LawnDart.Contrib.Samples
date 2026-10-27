@@ -16,5 +16,6 @@
     <PackageReference Include="LawnDart.Messaging.RabbitMQ" />
     <PackageReference Include="LawnDart.Messaging.SqlServer" />
     <PackageReference Include="LawnDart.Projections.Lightweight" />
+    <PackageReference Include="LawnDart.Projections.Lightweight.SqlServer" />
   </ItemGroup>
 </Project>
