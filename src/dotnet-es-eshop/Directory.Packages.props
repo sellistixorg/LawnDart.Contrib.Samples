@@ -6,8 +6,10 @@
   <ItemGroup>
     <!-- Aspire 13.6.1 -->
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.1" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.1" />
     <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.1" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
     <PackageVersion Include="Aspire.Microsoft.Data.SqlClient" Version="13.6.1" />
