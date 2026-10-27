@@ -8,8 +8,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.Redis" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The same database choice and database names as the services, so the two cannot drift apart. -->
+    <Compile Include="..\Infrastructure\EShopDatabase.cs" Link="Shared\EShopDatabase.cs" />
+    <Compile Include="..\Infrastructure\EShopDatabases.cs" Link="Shared\EShopDatabases.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Identity.API\LawnDart.Samples.EShop.Identity.API.csproj" />
