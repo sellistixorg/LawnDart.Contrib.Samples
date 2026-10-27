@@ -1,10 +1,11 @@
 namespace LawnDart.Samples.EShop.Infrastructure;
 
 /// <summary>
-/// Aspire SQL database names from <c>AppHost</c>.
+/// Aspire database names from <c>AppHost</c>.
 /// Each name is the <c>ConnectionStrings</c> key injected by <c>WithReference</c>.
+/// The names are the same on SQL Server and Postgres.
 /// </summary>
-public static class EShopSqlConnections
+public static class EShopDatabases
 {
     /// <summary>
     /// LawnDart event log for Identity.

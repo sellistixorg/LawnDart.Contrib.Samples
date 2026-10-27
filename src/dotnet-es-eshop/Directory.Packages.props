@@ -29,12 +29,15 @@
     <PackageVersion Include="LawnDart" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.AspNetCore" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.EventSourcing" Version="0.7.0-alpha.3" />
+    <PackageVersion Include="LawnDart.EventSourcing.Postgres" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.EventSourcing.SqlServer" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Messaging" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Messaging.InMemory" Version="0.7.0-alpha.3" />
+    <PackageVersion Include="LawnDart.Messaging.Postgres" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Messaging.RabbitMQ" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Messaging.SqlServer" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Projections.Lightweight" Version="0.7.0-alpha.3" />
+    <PackageVersion Include="LawnDart.Projections.Lightweight.Postgres" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Projections.Lightweight.SqlServer" Version="0.7.0-alpha.3" />
     <PackageVersion Include="LawnDart.Testing" Version="0.7.0-alpha.3" />
 

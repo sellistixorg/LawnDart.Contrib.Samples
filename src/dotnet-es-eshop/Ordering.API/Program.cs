@@ -5,6 +5,7 @@ using LawnDart.Samples.EShop.Ordering.API;
 using LawnDart.Samples.EShop.Shared.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
 builder.AddServiceDefaults();
 
@@ -13,7 +14,7 @@ builder.AddServiceDefaults();
 // Shared supplies integration events so the outbox can publish their tokens.
 var orderingAssembly = Assembly.GetExecutingAssembly();
 builder.AddEShopLawnDart(
-    EShopSqlConnections.Ordering,
+    EShopDatabases.Ordering,
     context => context.AddOrderingContext(orderingAssembly, typeof(OrderStarted).Assembly),
     EShopServiceNames.Ordering);
 builder.Services.AddEShopIdentityUrl(builder.Configuration);
@@ -24,7 +25,7 @@ builder.AddEShopSlices(orderingAssembly);
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSqlAsync();
+await app.InitializeEShopLawnDartSchemaAsync();
 
 app.MapDefaultEndpoints();
 app.MapLawnDartCommands();

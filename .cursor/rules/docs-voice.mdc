@@ -26,7 +26,8 @@ Lead with what is true and what to do. Do not open a page or section with a
 negation. Contrast only when it adds information.
 
 Sample READMEs state only what the code does. Be honest about stores:
-**InMemory** and **SQL Server** only in this repo. Do not claim Redis, Postgres,
+**InMemory** and **SQL Server** in this repo, plus the Postgres service host
+registration picked with `EShop:Database`. Do not claim Redis,
 Azure Service Bus, or Wolverine. Do not claim a store or transport this sample
 does not run.
 

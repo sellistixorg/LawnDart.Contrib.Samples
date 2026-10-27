@@ -12,7 +12,7 @@ Hosting design for `src/dotnet-es-eshop`.
 - SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`), Redis, and RabbitMQ in the AppHost.
 - LawnDart packages pinned to `0.7.0-alpha.3`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.
-- SQL schema init on startup. `InitializeEShopLawnDartSqlAsync` calls the package `InitializeSchemaAsync`. LawnDart has no versioned migrator. Re-runs are idempotent DDL.
+- SQL schema init on startup. `InitializeEShopLawnDartSchemaAsync` calls the package `InitializeSchemaAsync`. LawnDart has no versioned migrator. Re-runs are idempotent DDL.
 - Per-service bounded-context hooks (`AddCatalogContext`, and the rest). The service `Program.cs` calls the hook. An assembly scan runs once there.
 - ServiceDefaults health, OpenTelemetry, discovery, and resilience as the outer host shell.
 
@@ -62,7 +62,7 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 ## Out of scope for the host
 
 - Changing LawnDart product packages beyond the public `0.7.0-alpha.3` APIs.
-- Treating Redis as a LawnDart product store. Postgres is not used here. Azure Service Bus is not used here.
+- Treating Redis as a LawnDart product store. Postgres is used only through the `EShop:Database` setting on the service hosts. Azure Service Bus is not used here.
 
 ## Known gaps
 

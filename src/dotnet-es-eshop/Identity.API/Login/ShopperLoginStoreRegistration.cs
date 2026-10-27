@@ -15,6 +15,10 @@ public static class ShopperLoginStoreRegistration
     /// <summary>
     /// Registers <see cref="ApplicationDbContext"/>, ASP.NET Core Identity, and <see cref="IShopperLoginStore"/>.
     /// </summary>
+    /// <remarks>
+    /// The login store runs on SQL Server only. When <c>EShop:Database</c> is <c>Postgres</c>,
+    /// this method stops startup with a message instead of failing later on the first database call.
+    /// </remarks>
     /// <param name="builder">Identity service host.</param>
     /// <typeparam name="TBuilder">Host application builder.</typeparam>
     /// <returns>The same builder.</returns>
@@ -23,16 +27,24 @@ public static class ShopperLoginStoreRegistration
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        var connectionString = builder.Configuration.GetConnectionString(EShopSqlConnections.IdentityLogin);
+        var connectionString = builder.Configuration.GetConnectionString(EShopDatabases.IdentityLogin);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                $"Connection string '{EShopSqlConnections.IdentityLogin}' is missing. " +
+                $"Connection string '{EShopDatabases.IdentityLogin}' is missing. " +
                 "Start this service from the Aspire AppHost so the SQL database reference is injected.");
         }
 
+        var database = builder.Configuration.ReadEShopDatabase();
+        if (database != EShopDatabase.SqlServer)
+        {
+            throw new InvalidOperationException(
+                $"The Identity login store on '{EShopDatabases.IdentityLogin}' runs on SQL Server only for now. " +
+                $"'{EShopDatabaseSetting.ConfigurationKey}' is '{database}'. Start Identity.API with SqlServer.");
+        }
+
         builder.AddSqlServerDbContext<ApplicationDbContext>(
-            EShopSqlConnections.IdentityLogin,
+            EShopDatabases.IdentityLogin,
             configureDbContextOptions: options => options.EnableSensitiveDataLogging(false));
 
         builder.Services

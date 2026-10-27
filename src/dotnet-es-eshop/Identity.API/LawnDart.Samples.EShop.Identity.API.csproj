@@ -10,10 +10,8 @@
     <PackageReference Include="LawnDart" />
     <PackageReference Include="LawnDart.AspNetCore" />
     <PackageReference Include="LawnDart.EventSourcing" />
-    <PackageReference Include="LawnDart.EventSourcing.SqlServer" />
     <PackageReference Include="LawnDart.Messaging" />
     <PackageReference Include="LawnDart.Messaging.InMemory" />
-    <PackageReference Include="LawnDart.Messaging.SqlServer" />
     <PackageReference Include="LawnDart.Projections.Lightweight" />
   </ItemGroup>
   <ItemGroup>

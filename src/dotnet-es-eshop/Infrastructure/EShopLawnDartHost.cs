@@ -1,16 +1,20 @@
 using System.Text.RegularExpressions;
 using LawnDart;
+using LawnDart.EventSourcing.Postgres;
+using LawnDart.EventSourcing.Postgres.EventStore;
 using LawnDart.EventSourcing.SqlServer;
 using LawnDart.EventSourcing.SqlServer.EventStore;
 using LawnDart.EventStore;
 using LawnDart.Messaging;
 using LawnDart.Messaging.InMemory;
 using LawnDart.Messaging.Outbox;
+using LawnDart.Messaging.Postgres;
 using LawnDart.Messaging.RabbitMQ;
 using Microsoft.Extensions.Hosting;
 using LawnDart.Messaging.SqlServer;
 using LawnDart.Outbox;
 using LawnDart.Projections.Lightweight;
+using LawnDart.Projections.Lightweight.Postgres;
 using LawnDart.Projections.Lightweight.SqlServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +23,7 @@ using Microsoft.Extensions.Logging;
 namespace LawnDart.Samples.EShop.Infrastructure;
 
 /// <summary>
-/// Shared LawnDart SQL registration for eShop service hosts.
+/// Shared LawnDart registration for eShop service hosts, on SQL Server or Postgres.
 /// </summary>
 public static class EShopLawnDartHost
 {
@@ -29,9 +33,15 @@ public static class EShopLawnDartHost
     public const string ContextName = "default";
 
     /// <summary>
-    /// SQL schema for the event log, outbox, views, checkpoints, and inbox.
+    /// SQL Server schema for the event log, outbox, views, checkpoints, and inbox.
+    /// On Postgres the host passes no schema name, so LawnDart uses <see cref="PostgresSchemaName"/>.
     /// </summary>
     public const string SchemaName = "dbo";
+
+    /// <summary>
+    /// Postgres schema LawnDart uses for the <c>default</c> context when no schema name is passed.
+    /// </summary>
+    public const string PostgresSchemaName = "lawndart";
 
     /// <summary>
     /// Aspire connection name from <c>AddRabbitMQ("eventbus")</c>.
@@ -51,7 +61,8 @@ public static class EShopLawnDartHost
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
-    /// Registers LawnDart against the Aspire SQL connection named <paramref name="connectionName"/>.
+    /// Registers LawnDart against the Aspire database connection named <paramref name="connectionName"/>.
+    /// The <c>EShop:Database</c> setting picks SQL Server (the default) or Postgres.
     /// </summary>
     /// <param name="subscriptionClient">
     /// RabbitMQ subscription name, for example <see cref="EShopServiceNames.Catalog"/>.
@@ -59,14 +70,18 @@ public static class EShopLawnDartHost
     /// <c>eventbus</c> connection. When omitted, the host uses <c>LawnDart.Messaging.InMemory</c>.
     /// </param>
     /// <param name="enableOutbox">
-    /// When true, this process polls the SQL outbox and publishes it.
+    /// When true, this process polls the outbox table and publishes it.
     /// OrderProcessor passes false. It shares <c>orderingdb</c> with Ordering.API, and Ordering.API publishes that outbox.
     /// </param>
     /// <remarks>
     /// <para>
-    /// Wires the SQL event log, view store, checkpoints, transactional outbox, and durable inbox.
-    /// The outbox publishes through <c>AddMessageTransportOutboxPublisher</c>.
-    /// The inbox is <c>AddSqlInboxStore</c> on the consume path.
+    /// Wires the event log, view store, checkpoints, transactional outbox, and durable inbox
+    /// on the database chosen by <see cref="EShopDatabaseSetting.ReadEShopDatabase"/>.
+    /// SQL Server uses <c>UseSqlServer</c>, <c>AddSqlProjectionStores</c>, and <c>AddSqlInboxStore</c>
+    /// in schema <see cref="SchemaName"/>.
+    /// Postgres uses <c>UsePostgres</c>, <c>AddPostgresProjectionStores</c>, and <c>AddPostgresInboxStore</c>
+    /// in schema <see cref="PostgresSchemaName"/>.
+    /// The outbox publishes through <c>AddMessageTransportOutboxPublisher</c> on both.
     /// </para>
     /// <para>
     /// <paramref name="configureContext"/> is the per-service hook.
@@ -77,7 +92,7 @@ public static class EShopLawnDartHost
     /// Projection stores are already registered when the hook runs.
     /// </para>
     /// <para>
-    /// Call <see cref="InitializeEShopLawnDartSqlAsync(IServiceProvider, CancellationToken)"/>
+    /// Call <see cref="InitializeEShopLawnDartSchemaAsync(IServiceProvider, CancellationToken)"/>
     /// after the host is built and before it runs.
     /// </para>
     /// </remarks>
@@ -93,85 +108,141 @@ public static class EShopLawnDartHost
         ArgumentNullException.ThrowIfNull(configureContext);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
 
+        var database = builder.Configuration.ReadEShopDatabase();
         var connectionString = builder.Configuration.GetConnectionString(connectionName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
                 $"Connection string '{connectionName}' is missing. " +
-                "Start this service from the Aspire AppHost so the SQL database reference is injected.");
+                "Start this service from the Aspire AppHost so the database reference is injected.");
         }
 
         var services = builder.Services;
         services.AddLawnDart(options => options.RequireTenantId = false);
         RegisterTransport(builder, services, subscriptionClient);
-        services.AddSqlInboxStore(connectionString);
-        services.AddMessageTransportOutboxPublisher();
-        services.AddSqlProjectionStores(ContextName, connectionString, SchemaName);
+        switch (database)
+        {
+            case EShopDatabase.SqlServer:
+                services.AddSqlInboxStore(connectionString);
+                services.AddMessageTransportOutboxPublisher();
+                services.AddSqlProjectionStores(ContextName, connectionString, SchemaName);
+                break;
+            case EShopDatabase.Postgres:
+                services.AddPostgresInboxStore(connectionString);
+                services.AddMessageTransportOutboxPublisher();
+                services.AddPostgresProjectionStores(ContextName, connectionString);
+                break;
+            default:
+                throw UnknownDatabase(database);
+        }
 
         var context = services.AddBoundedContext(ContextName);
         configureContext(context);
 
-        // LawnDart resolves the SQL event store and outbox publisher only when a catalog exists.
+        // LawnDart resolves the event store and outbox publisher only when a catalog exists.
         if (context.EventCatalog is null)
         {
             context.WithEventTypes(typeof(EShopHostCatalogEvent));
         }
 
-        context.UseSqlServer(options =>
+        switch (database)
         {
-            options.ConnectionString = connectionString;
-            options.RequireTenantId = false;
-            options.EnableOutbox = enableOutbox;
-            options.SchemaName = SchemaName;
-        });
+            case EShopDatabase.SqlServer:
+                context.UseSqlServer(options =>
+                {
+                    options.ConnectionString = connectionString;
+                    options.RequireTenantId = false;
+                    options.EnableOutbox = enableOutbox;
+                    options.SchemaName = SchemaName;
+                });
+                break;
+            case EShopDatabase.Postgres:
+                context.UsePostgres(options =>
+                {
+                    options.ConnectionString = connectionString;
+                    options.RequireTenantId = false;
+                    options.EnableOutbox = enableOutbox;
+                });
+                break;
+        }
 
         return builder;
     }
 
     /// <summary>
-    /// Creates LawnDart SQL tables for the event log, outbox, views, checkpoints, and inbox.
+    /// Creates the LawnDart tables for the event log, outbox, views, checkpoints, and inbox
+    /// on the database the host was registered with.
     /// Idempotent. LawnDart exposes <c>InitializeSchemaAsync</c>, not a versioned migrator.
     /// </summary>
-    public static Task InitializeEShopLawnDartSqlAsync(
+    public static Task InitializeEShopLawnDartSchemaAsync(
         this IHost host,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(host);
-        return host.Services.InitializeEShopLawnDartSqlAsync(cancellationToken);
+        return host.Services.InitializeEShopLawnDartSchemaAsync(cancellationToken);
     }
 
-    /// <inheritdoc cref="InitializeEShopLawnDartSqlAsync(IHost, CancellationToken)"/>
-    public static async Task InitializeEShopLawnDartSqlAsync(
+    /// <inheritdoc cref="InitializeEShopLawnDartSchemaAsync(IHost, CancellationToken)"/>
+    public static async Task InitializeEShopLawnDartSchemaAsync(
         this IServiceProvider services,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         var logger = services.GetService<ILoggerFactory>()?.CreateLogger(LogCategory);
+        var store = services.GetRequiredKeyedService<IEventStore>(ContextName);
+        var database = store switch
+        {
+            SqlServerEventStore => EShopDatabase.SqlServer,
+            PostgresEventStore => EShopDatabase.Postgres,
+            _ => throw new InvalidOperationException(
+                $"Context '{ContextName}' resolved {store.GetType().Name}, not SqlServerEventStore or PostgresEventStore. " +
+                "Call AddEShopLawnDart before InitializeEShopLawnDartSchemaAsync.")
+        };
+
         logger?.LogInformation(
-            "Initializing LawnDart SQL schema for context {ContextName}.",
+            "Initializing LawnDart {Database} schema for context {ContextName}.",
+            DisplayName(database),
             ContextName);
 
-        var store = services.GetRequiredKeyedService<IEventStore>(ContextName);
-        if (store is not SqlServerEventStore sql)
+        switch (store)
         {
-            throw new InvalidOperationException(
-                $"Context '{ContextName}' resolved {store.GetType().Name}, not SqlServerEventStore. " +
-                "Call AddEShopLawnDart before InitializeEShopLawnDartSqlAsync.");
+            case SqlServerEventStore sqlServer:
+                await sqlServer.InitializeSchemaAsync(cancellationToken).ConfigureAwait(false);
+                break;
+            case PostgresEventStore postgres:
+                await postgres.InitializeSchemaAsync(cancellationToken).ConfigureAwait(false);
+                break;
         }
 
-        await sql.InitializeSchemaAsync(cancellationToken).ConfigureAwait(false);
         await services.GetRequiredKeyedService<IOutboxWriter>(ContextName)
             .InitializeSchemaAsync(cancellationToken)
             .ConfigureAwait(false);
-        await services.InitializeSqlProjectionStoresAsync(ContextName, cancellationToken)
-            .ConfigureAwait(false);
-        await services.InitializeSqlInboxStoreAsync(cancellationToken).ConfigureAwait(false);
+
+        if (database == EShopDatabase.SqlServer)
+        {
+            await services.InitializeSqlProjectionStoresAsync(ContextName, cancellationToken)
+                .ConfigureAwait(false);
+            await services.InitializeSqlInboxStoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            await services.InitializePostgresProjectionStoresAsync(ContextName, cancellationToken)
+                .ConfigureAwait(false);
+            await services.InitializePostgresInboxStoreAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         logger?.LogInformation(
-            "LawnDart SQL schema is ready for context {ContextName}.",
+            "LawnDart {Database} schema is ready for context {ContextName}.",
+            DisplayName(database),
             ContextName);
     }
+
+    private static string DisplayName(EShopDatabase database) =>
+        database == EShopDatabase.SqlServer ? "SQL Server" : "Postgres";
+
+    private static InvalidOperationException UnknownDatabase(EShopDatabase database) =>
+        new($"Database '{database}' is not supported. Use SqlServer or Postgres.");
 
     /// <summary>
     /// Records <paramref name="messageType"/> so RabbitMQ topology setup can declare its queue.
@@ -244,7 +315,7 @@ public static class EShopLawnDartHost
     }
 
     /// <summary>
-    /// Registers the message transport for a subscriber that has no SQL outbox.
+    /// Registers the message transport for a subscriber that has no outbox table.
     /// </summary>
     /// <param name="builder">The host.</param>
     /// <param name="subscriptionClient">Subscription name, for example <see cref="EShopServiceNames.WebApp"/>.</param>
