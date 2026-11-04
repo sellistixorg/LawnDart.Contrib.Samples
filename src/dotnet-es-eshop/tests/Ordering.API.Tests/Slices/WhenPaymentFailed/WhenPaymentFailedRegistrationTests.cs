@@ -79,7 +79,7 @@ public class WhenPaymentFailedRegistrationTests
 
             var json = JsonSerializer.Serialize(cancelled);
             Assert.Contains("Card declined", json, StringComparison.Ordinal);
-            Assert.DoesNotContain("4444", json, StringComparison.Ordinal);
+            CancelPayload.AssertOmitsCardLastFour(json);
             Assert.DoesNotContain("CardNumber", json, StringComparison.OrdinalIgnoreCase);
 
             var order = await host.Services.GetRequiredService<IAggregateRepository>()

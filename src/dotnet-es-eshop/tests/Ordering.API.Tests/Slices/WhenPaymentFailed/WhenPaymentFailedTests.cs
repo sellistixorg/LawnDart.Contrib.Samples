@@ -45,7 +45,7 @@ public class WhenPaymentFailedTests
 
         var commandJson = JsonSerializer.Serialize(command);
         Assert.Contains("Card declined", commandJson, StringComparison.Ordinal);
-        Assert.DoesNotContain("4444", commandJson, StringComparison.Ordinal);
+        CancelPayload.AssertOmitsCardLastFour(commandJson);
         Assert.DoesNotContain("CardNumber", commandJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("unitPrice", commandJson, StringComparison.OrdinalIgnoreCase);
 
@@ -60,7 +60,7 @@ public class WhenPaymentFailedTests
 
         var cancelledJson = JsonSerializer.Serialize(cancelled);
         Assert.Contains("Card declined", cancelledJson, StringComparison.Ordinal);
-        Assert.DoesNotContain("4444", cancelledJson, StringComparison.Ordinal);
+        CancelPayload.AssertOmitsCardLastFour(cancelledJson);
         Assert.DoesNotContain("CardNumber", cancelledJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("unitPrice", cancelledJson, StringComparison.OrdinalIgnoreCase);
 
@@ -71,6 +71,30 @@ public class WhenPaymentFailedTests
         var line = Assert.Single(order.State.OrderItems);
         Assert.Equal(productId, line.ProductId);
         Assert.Equal(2, line.Units);
+    }
+
+    [Fact]
+    public void Cancel_payload_ignores_card_digits_inside_a_timestamp()
+    {
+        var cancelled = new OrderCancelled(
+            Guid.NewGuid(),
+            new DateTime(2026, 10, 27, 16, 34, 49, DateTimeKind.Utc).AddTicks(9_044_445),
+            Guid.NewGuid(),
+            OrderAggregate.CancelledStatus,
+            "Card declined");
+
+        var json = JsonSerializer.Serialize(cancelled);
+        Assert.Contains("4444", json, StringComparison.Ordinal);
+        CancelPayload.AssertOmitsCardLastFour(json);
+    }
+
+    [Fact]
+    public void Cancel_payload_rejects_a_copied_card_last_four()
+    {
+        var json = JsonSerializer.Serialize(new { MaskedCardNumber = "4444" });
+        Assert.Contains("4444", json, StringComparison.Ordinal);
+        var error = Assert.Throws<Xunit.Sdk.DoesNotContainException>(() => CancelPayload.AssertOmitsCardLastFour(json));
+        Assert.Contains("4444", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
