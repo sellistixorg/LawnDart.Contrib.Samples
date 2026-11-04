@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Evolution</RootNamespace>
     <AssemblyName>HarborStreet.Evolution</AssemblyName>
-    <Description>Harbor Street event/projection evolution (ESBook ch13).</Description>
+    <Description>Facts Before Features sample: event and projection versioning.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Catalog</RootNamespace>
     <AssemblyName>HarborStreet.Catalog</AssemblyName>
-    <Description>Harbor Street Books — Title/catalog aggregate (ESBook ch04 first cut).</Description>
+    <Description>Facts Before Features sample: Title catalog aggregate.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

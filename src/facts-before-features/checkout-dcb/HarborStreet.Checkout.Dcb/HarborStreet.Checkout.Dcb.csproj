@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Checkout.Dcb</RootNamespace>
     <AssemblyName>HarborStreet.Checkout.Dcb</AssemblyName>
-    <Description>Harbor Street last-copy checkout via DCB (ESBook ch07).</Description>
+    <Description>Facts Before Features sample: last-copy checkout with a dynamic consistency boundary.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

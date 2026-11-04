@@ -32,7 +32,7 @@ dotnet test evolution/HarborStreet.Evolution.Tests/HarborStreet.Evolution.Tests.
 
 ## What AI must not invent
 
-- Mutating or deleting old `OrderPlaced` bytes “to migrate”  
+- Mutating or deleting old `OrderPlaced` bytes that are already stored  
 - One projection that breaks when warehouse is missing  
 - Renaming the v1 event type name out from under stored events  
 - Requiring warehouse on upcasted rows as if it were always known  
@@ -47,4 +47,4 @@ Projectors/       Catalog v1/v2, Order history v1/v2, RebuildAsync
 Seeding/          Mixed history for *The Lighthouse Keeper*
 ```
 
-Chapter 14 (next) covers deliberate breaking changes and heavier migrate paths; this sample stays on the additive/upcast happy path.
+This sample stays on the additive upcast path. Old events stay as written.

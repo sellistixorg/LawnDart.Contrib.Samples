@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Coordination</RootNamespace>
     <AssemblyName>HarborStreet.Coordination</AssemblyName>
-    <Description>Harbor Street payment follow-on reactions (ESBook ch11).</Description>
+    <Description>Facts Before Features sample: payment follow-on reactions.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

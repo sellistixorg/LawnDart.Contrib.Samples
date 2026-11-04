@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Projections</RootNamespace>
     <AssemblyName>HarborStreet.Projections</AssemblyName>
-    <Description>Harbor Street read models from events (ESBook ch10).</Description>
+    <Description>Facts Before Features sample: read models from events.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

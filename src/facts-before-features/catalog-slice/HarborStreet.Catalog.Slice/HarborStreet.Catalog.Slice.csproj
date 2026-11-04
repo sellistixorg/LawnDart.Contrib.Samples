@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Catalog.Slice</RootNamespace>
     <AssemblyName>HarborStreet.Catalog.Slice</AssemblyName>
-    <Description>Harbor Street Catalog vertical slice — AI skeleton shape (ESBook ch08).</Description>
+    <Description>Facts Before Features sample: catalog vertical slice in the AI skeleton shape.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

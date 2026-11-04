@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.EndToEnd</RootNamespace>
     <AssemblyName>HarborStreet.EndToEnd</AssemblyName>
-    <Description>Harbor Street end-to-end: DCB last-copy checkout + payment follow-on (ESBook ch18).</Description>
+    <Description>Facts Before Features sample: last-copy checkout and payment follow-on.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />

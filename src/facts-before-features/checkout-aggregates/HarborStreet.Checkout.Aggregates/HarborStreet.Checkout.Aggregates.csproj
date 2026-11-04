@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>HarborStreet.Checkout.Aggregates</RootNamespace>
     <AssemblyName>HarborStreet.Checkout.Aggregates</AssemblyName>
-    <Description>Harbor Street last-copy checkout via traditional aggregates + choreography (ESBook ch07).</Description>
+    <Description>Facts Before Features sample: last-copy checkout with aggregates and choreography.</Description>
   </PropertyGroup>
 
   <Import Project="..\..\LawnDart.refs.props" />
