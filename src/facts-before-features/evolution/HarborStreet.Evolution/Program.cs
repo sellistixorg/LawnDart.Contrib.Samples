@@ -6,7 +6,7 @@ using HarborStreet.Evolution.Seeding;
 using Microsoft.Extensions.DependencyInjection;
 using LawnDart.EventStore;
 
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch17", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-evolution", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var services = new ServiceCollection();
@@ -31,7 +31,7 @@ var catalogV2 = pipeline.Store.CatalogV2[titleId];
 var legacyV2 = pipeline.Store.OrdersV2[legacyOrder];
 var modernV2 = pipeline.Store.OrdersV2[modernOrder];
 
-Console.WriteLine("Harbor Street - ch17 evolution (upcast + projection families)");
+Console.WriteLine("Harbor Street evolution (upcast and projection families)");
 Console.WriteLine($"  Catalog v2: {catalogV2.Name} — {catalogV2.ScarcityLabel}");
 Console.WriteLine($"  Legacy order upcast: warehouseKnown={legacyV2.WarehouseKnown} (Empty={OrderPlacedUpcaster.UnknownWarehouseId == legacyV2.WarehouseId})");
 Console.WriteLine($"  Modern order: warehouse={modernV2.WarehouseId.ToString()[..8]}… display={modernV2.CustomerDisplayName}");

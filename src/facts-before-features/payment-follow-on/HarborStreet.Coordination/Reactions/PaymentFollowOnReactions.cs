@@ -7,7 +7,7 @@ using LawnDart.Aggregates;
 namespace HarborStreet.Coordination.Reactions;
 
 /// <summary>
-/// Process-style reactions after payment facts. Not part of the Place Order decision (Ch 7).
+/// Process-style reactions after payment facts. Not part of the Place Order decision.
 /// Payment Captured → Start Fulfillment; Payment Failed → Cancel Order + Stock Released.
 /// </summary>
 public sealed class PaymentFollowOnReactions

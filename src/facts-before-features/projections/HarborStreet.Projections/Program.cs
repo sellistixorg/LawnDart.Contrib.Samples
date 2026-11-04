@@ -4,7 +4,7 @@ using HarborStreet.Projections.Seeding;
 using Microsoft.Extensions.DependencyInjection;
 using LawnDart.EventStore;
 
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch08", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-projections", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var services = new ServiceCollection();
@@ -28,7 +28,7 @@ var catalog = pipeline.Store.Catalog[titleId];
 var stock = pipeline.Store.Stock[titleId];
 var order = pipeline.Store.Orders[orderId];
 
-Console.WriteLine("Harbor Street - ch08 projections (read models from events)");
+Console.WriteLine("Harbor Street projections (read models from events)");
 Console.WriteLine("  Catalog:");
 Console.WriteLine($"    {catalog.Name} — {catalog.Price:C} — scarce={catalog.IsScarce}");
 Console.WriteLine("  Stock dashboard:");

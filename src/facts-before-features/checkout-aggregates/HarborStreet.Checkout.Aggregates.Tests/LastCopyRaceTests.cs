@@ -12,7 +12,7 @@ namespace HarborStreet.Checkout.Aggregates.Tests;
 
 /// <summary>
 /// Documents last-copy behavior under traditional aggregates + choreography.
-/// Source GWT: docs/models/bookstore-v1/LAST_COPY_GWT.md
+/// Source GWT: docs/models/facts-before-features/bookstore-v1/LAST_COPY_GWT.md
 /// </summary>
 public class LastCopyRaceTests
 {

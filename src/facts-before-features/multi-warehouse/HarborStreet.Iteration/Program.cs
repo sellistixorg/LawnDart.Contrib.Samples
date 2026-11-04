@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using LawnDart.Dcb;
 using LawnDart.EventStore;
 
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch16", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-warehouses", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var services = new ServiceCollection();
@@ -43,7 +43,7 @@ var race = await Task.WhenAll(
 var all = (await store.ReadByQueryAsync(Query.All())).Events;
 var harborAfter = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags);
 
-Console.WriteLine("Harbor Street - ch16 multi-warehouse iteration (model v2)");
+Console.WriteLine("Harbor Street multi-warehouse (model v2)");
 Console.WriteLine($"  Downtown Place Order: {downtownOrder.Status}");
 Console.WriteLine($"  Harbor race: {race[0].Status} / {race[1].Status}");
 Console.WriteLine($"  OrderPlaced: {all.Count(e => e.Event is OrderPlaced)}");

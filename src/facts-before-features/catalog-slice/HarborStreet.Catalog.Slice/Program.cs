@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using LawnDart.Aggregates;
 
 // Thin host: composition + one happy-path demo. Domain rules live under Domain/.
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch14", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-catalog-slice", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var services = new ServiceCollection();
@@ -25,7 +25,7 @@ await repo.HandleCommandAsync(
     new RestockTitleCommand(Guid.NewGuid(), titleId, Quantity: 1));
 
 var title = await repo.GetOrCreateAsync<Title>(titleId);
-Console.WriteLine("Harbor Street — ch14 catalog vertical slice");
+Console.WriteLine("Harbor Street catalog vertical slice");
 Console.WriteLine($"  Title: {title.State.Name}");
 Console.WriteLine($"  Available: {title.State.AvailableUnits}");
 Console.WriteLine($"  Scarce: {title.State.IsScarce}");

@@ -9,7 +9,7 @@ using LawnDart.Aggregates;
 using LawnDart.EventStore;
 
 // Demo: two Place Order attempts that both observed the last unit — aggregates + choreography pain.
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch08-agg", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-aggregates", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var services = new ServiceCollection();
@@ -45,7 +45,7 @@ var placed = all.Count(e => e.Event is OrderPlaced);
 var reserved = all.Count(e => e.Event is StockReserved);
 var title = await repo.GetOrCreateAsync<Title>(titleId);
 
-Console.WriteLine("Harbor Street - ch10 aggregates checkout (last-copy race)");
+Console.WriteLine("Harbor Street aggregates checkout (last-copy race)");
 Console.WriteLine($"  A: {resultA.Status}");
 Console.WriteLine($"  B: {resultB.Status}");
 Console.WriteLine($"  OrderPlaced events: {placed}");

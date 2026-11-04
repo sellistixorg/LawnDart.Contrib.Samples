@@ -6,7 +6,7 @@ using LawnDart.Dcb;
 namespace HarborStreet.EndToEnd.Domain;
 
 /// <summary>
-/// DCB inventory + Place Order on <c>title:{id}</c> (ch07 shape), plus Release Stock for payment failure.
+/// Place Order and stock reservation as one decision on <c>title:{id}</c>, plus Release Stock after payment failure.
 /// </summary>
 public class InventoryDecision : DcbEntity<InventoryState>
 {

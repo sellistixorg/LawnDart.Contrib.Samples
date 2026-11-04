@@ -4,6 +4,10 @@ Samples that use [LawnDart](https://www.nuget.org/packages/LawnDart). This repos
 
 The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on LawnDart, .NET 10, and .NET Aspire. LawnDart packages are pinned to `0.7.0-alpha.4`.
 
+## Book code
+
+`src/facts-before-features/` is the code for Facts Before Features, set in Harbor Street Books. You need the .NET 10 SDK. Those samples keep state in memory. The guide is [`src/facts-before-features/README.md`](src/facts-before-features/README.md).
+
 ## Prerequisites
 
 - .NET 10 SDK. Run from `src/dotnet-es-eshop` so `global.json` applies. It pins `10.0.401` and rolls forward to the latest feature band.

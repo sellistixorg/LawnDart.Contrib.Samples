@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using LawnDart.Dcb;
 using LawnDart.EventStore;
 
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch19", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-end-to-end", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var gateway = new FakePaymentGateway { NextCaptureSucceeds = true };
@@ -41,7 +41,7 @@ var inventory = await bookstore.GetInventoryAsync(titleId);
 var order = await bookstore.GetOrderAsync(winner.OrderId);
 var all = (await store.ReadByQueryAsync(Query.All())).Events;
 
-Console.WriteLine("Harbor Street - ch19 end-to-end (last-copy + payment)");
+Console.WriteLine("Harbor Street end to end (last-copy and payment)");
 Console.WriteLine($"  Race A: {race[0].Status}");
 Console.WriteLine($"  Race B: {race[1].Status}");
 Console.WriteLine($"  StockReserved: {all.Count(e => e.Event is StockReserved)}");
