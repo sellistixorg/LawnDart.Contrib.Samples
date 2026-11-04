@@ -22,7 +22,7 @@ env:
 
 jobs:
   build-test:
-    name: Facts Before Features: restore, build, and test
+    name: "Facts Before Features: restore, build, and test"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
