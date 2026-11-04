@@ -1,0 +1,50 @@
+# Restores, builds, and tests src/facts-before-features/HarborStreet.Samples.slnx.
+# Runs on every pull request to main and every push to main. No path filter.
+# No services. The samples run in memory.
+name: Facts Before Features
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: facts-before-features-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  build-test:
+    name: "Facts Before Features: restore, build, and test"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src/facts-before-features
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: src/facts-before-features/global.json
+
+      - name: Restore
+        run: dotnet restore HarborStreet.Samples.slnx
+
+      - name: Build
+        run: dotnet build HarborStreet.Samples.slnx --no-restore
+
+      - name: Test
+        run: dotnet test HarborStreet.Samples.slnx --no-build
+
+      - name: Smoke check
+        run: dotnet run --project smoke-check/HarborStreet.Shell

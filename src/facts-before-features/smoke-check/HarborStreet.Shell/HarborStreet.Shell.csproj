@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HarborStreet.Shell</RootNamespace>
+    <AssemblyName>HarborStreet.Shell</AssemblyName>
+    <Description>Facts Before Features sample: smoke project proving LawnDart NuGet packages resolve.</Description>
+  </PropertyGroup>
+
+  <Import Project="..\..\LawnDart.refs.props" />
+</Project>
