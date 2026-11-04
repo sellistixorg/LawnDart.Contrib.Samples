@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HarborStreet.Iteration</RootNamespace>
+    <AssemblyName>HarborStreet.Iteration</AssemblyName>
+    <Description>Harbor Street multi-warehouse iteration (ESBook ch12 / model v2).</Description>
+  </PropertyGroup>
+
+  <Import Project="..\..\LawnDart.refs.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HarborStreet.Evolution</RootNamespace>
+    <AssemblyName>HarborStreet.Evolution</AssemblyName>
+    <Description>Harbor Street event/projection evolution (ESBook ch13).</Description>
+  </PropertyGroup>
+
+  <Import Project="..\..\LawnDart.refs.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+</Project>

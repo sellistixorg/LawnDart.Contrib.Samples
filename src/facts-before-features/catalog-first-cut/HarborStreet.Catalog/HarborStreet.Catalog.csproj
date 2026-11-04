@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HarborStreet.Catalog</RootNamespace>
+    <AssemblyName>HarborStreet.Catalog</AssemblyName>
+    <Description>Harbor Street Books — Title/catalog aggregate (ESBook ch04 first cut).</Description>
+  </PropertyGroup>
+
+  <Import Project="..\..\LawnDart.refs.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+</Project>

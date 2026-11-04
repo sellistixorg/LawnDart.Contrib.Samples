@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HarborStreet.EndToEnd</RootNamespace>
+    <AssemblyName>HarborStreet.EndToEnd</AssemblyName>
+    <Description>Harbor Street end-to-end: DCB last-copy checkout + payment follow-on (ESBook ch18).</Description>
+  </PropertyGroup>
+
+  <Import Project="..\..\LawnDart.refs.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+</Project>

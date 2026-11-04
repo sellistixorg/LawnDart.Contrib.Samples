@@ -1,0 +1,11 @@
+<!--
+  Import from each sample host .csproj:
+    <Import Project="..\..\LawnDart.refs.props" />
+-->
+<Project>
+  <ItemGroup>
+    <PackageReference Include="LawnDart" />
+    <PackageReference Include="LawnDart.EventSourcing" />
+    <PackageReference Include="LawnDart.Testing" />
+  </ItemGroup>
+</Project>

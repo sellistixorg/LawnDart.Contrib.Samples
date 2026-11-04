@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HarborStreet.Checkout.Aggregates</RootNamespace>
+    <AssemblyName>HarborStreet.Checkout.Aggregates</AssemblyName>
+    <Description>Harbor Street last-copy checkout via traditional aggregates + choreography (ESBook ch07).</Description>
+  </PropertyGroup>
+
+  <Import Project="..\..\LawnDart.refs.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+</Project>

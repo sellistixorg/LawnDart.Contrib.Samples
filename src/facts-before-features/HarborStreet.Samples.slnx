@@ -1,0 +1,41 @@
+<Solution>
+  <Folder Name="/catalog-first-cut/">
+    <Project Path="catalog-first-cut/HarborStreet.Catalog.Tests/HarborStreet.Catalog.Tests.csproj" />
+    <Project Path="catalog-first-cut/HarborStreet.Catalog/HarborStreet.Catalog.csproj" />
+  </Folder>
+  <Folder Name="/checkout-aggregates/">
+    <Project Path="checkout-aggregates/HarborStreet.Checkout.Aggregates.Tests/HarborStreet.Checkout.Aggregates.Tests.csproj" />
+    <Project Path="checkout-aggregates/HarborStreet.Checkout.Aggregates/HarborStreet.Checkout.Aggregates.csproj" />
+  </Folder>
+  <Folder Name="/checkout-dcb/">
+    <Project Path="checkout-dcb/HarborStreet.Checkout.Dcb.Tests/HarborStreet.Checkout.Dcb.Tests.csproj" />
+    <Project Path="checkout-dcb/HarborStreet.Checkout.Dcb/HarborStreet.Checkout.Dcb.csproj" />
+  </Folder>
+  <Folder Name="/catalog-slice/">
+    <Project Path="catalog-slice/HarborStreet.Catalog.Slice.Tests/HarborStreet.Catalog.Slice.Tests.csproj" />
+    <Project Path="catalog-slice/HarborStreet.Catalog.Slice/HarborStreet.Catalog.Slice.csproj" />
+  </Folder>
+  <Folder Name="/projections/">
+    <Project Path="projections/HarborStreet.Projections.Tests/HarborStreet.Projections.Tests.csproj" />
+    <Project Path="projections/HarborStreet.Projections/HarborStreet.Projections.csproj" />
+  </Folder>
+  <Folder Name="/payment-follow-on/">
+    <Project Path="payment-follow-on/HarborStreet.Coordination.Tests/HarborStreet.Coordination.Tests.csproj" />
+    <Project Path="payment-follow-on/HarborStreet.Coordination/HarborStreet.Coordination.csproj" />
+  </Folder>
+  <Folder Name="/multi-warehouse/">
+    <Project Path="multi-warehouse/HarborStreet.Iteration.Tests/HarborStreet.Iteration.Tests.csproj" />
+    <Project Path="multi-warehouse/HarborStreet.Iteration/HarborStreet.Iteration.csproj" />
+  </Folder>
+  <Folder Name="/evolution/">
+    <Project Path="evolution/HarborStreet.Evolution.Tests/HarborStreet.Evolution.Tests.csproj" />
+    <Project Path="evolution/HarborStreet.Evolution/HarborStreet.Evolution.csproj" />
+  </Folder>
+  <Folder Name="/end-to-end/">
+    <Project Path="end-to-end/HarborStreet.EndToEnd.Tests/HarborStreet.EndToEnd.Tests.csproj" />
+    <Project Path="end-to-end/HarborStreet.EndToEnd/HarborStreet.EndToEnd.csproj" />
+  </Folder>
+  <Folder Name="/smoke-check/">
+    <Project Path="smoke-check/HarborStreet.Shell/HarborStreet.Shell.csproj" />
+  </Folder>
+</Solution>
