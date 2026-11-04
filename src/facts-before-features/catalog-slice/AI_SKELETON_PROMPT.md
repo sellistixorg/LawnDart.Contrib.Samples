@@ -18,7 +18,7 @@ Program.cs (thin)
 *.Tests with GWT for Add Title to Catalog
 ```
 
-3. Use LawnDart via `..\..\LawnDart.refs.props` (nuget.org, 0.7.0-alpha.3).
+3. Use LawnDart via `..\..\LawnDart.refs.props` (nuget.org, 0.7.0-alpha.4).
 4. Events: JSON sealed records + `[EventTypeName("HarborStreet.…")]`. Host: `AddLawnDart` + `UseInMemory` + `WithEventTypes`. Tests: `BddTestContext.CreateInMemory`.
 5. No cart, checkout, payment, or shipping code.
 6. Hosting must not contain business rules.

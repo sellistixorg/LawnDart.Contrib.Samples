@@ -5,7 +5,7 @@ using LawnDart.Aggregates;
 namespace HarborStreet.Coordination.Seeding;
 
 /// <summary>
-/// Seeds post-checkout state: scarce title reserved for a placed order (Ch 7 already happened).
+/// Seeds post-checkout state: a scarce title already reserved for a placed order.
 /// </summary>
 public static class CheckoutSeed
 {

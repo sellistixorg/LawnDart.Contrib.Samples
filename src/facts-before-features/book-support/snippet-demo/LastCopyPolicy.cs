@@ -2,7 +2,7 @@ namespace HarborStreet.BookSupport.SnippetDemo;
 
 /// <summary>
 /// Tiny type used only to demonstrate Quarto code includes in the manuscript.
-/// Replace with real chapter samples under src/samples/chNN-* as you build them.
+/// The runnable samples live in the topic folders next to this one.
 /// </summary>
 public static class LastCopyPolicy
 {

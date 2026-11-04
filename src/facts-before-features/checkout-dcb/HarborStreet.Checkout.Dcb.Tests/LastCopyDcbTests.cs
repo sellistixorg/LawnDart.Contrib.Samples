@@ -10,8 +10,8 @@ namespace HarborStreet.Checkout.Dcb.Tests;
 
 /// <summary>
 /// Last-copy GWT under DCB — exactly one winner, no orphan Order Placed.
-/// Source: docs/models/bookstore-v1/LAST_COPY_GWT.md
-/// Contrast: ch10-aggregates-checkout (orphan order / NeedsCompensation).
+/// Source: docs/models/facts-before-features/bookstore-v1/LAST_COPY_GWT.md
+/// Contrast: checkout-aggregates (orphan order / NeedsCompensation).
 /// </summary>
 public class LastCopyDcbTests
 {

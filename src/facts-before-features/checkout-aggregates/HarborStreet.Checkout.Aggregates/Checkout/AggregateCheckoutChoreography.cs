@@ -11,7 +11,7 @@ namespace HarborStreet.Checkout.Aggregates.Checkout;
 /// Traditional aggregate checkout: optimistic stock check → Place Order → Reserve Stock.
 /// Order and Title are different streams, so two checkouts that both observed the last
 /// unit can commit two Order Placed facts and only one Stock Reserved (compensation required).
-/// Contrast with ch11-dcb-checkout.
+/// Contrast with checkout-dcb.
 /// </summary>
 public sealed class AggregateCheckoutChoreography
 {

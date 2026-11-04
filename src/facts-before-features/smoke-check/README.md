@@ -1,23 +1,23 @@
-# HarborStreet.Shell
+# Smoke check
 
-Trivial smoke project for the sample solution.
+A small project that proves the solution restores LawnDart from nuget.org.
 
 ## Objective
 
-Prove `src/samples` can restore and build against LawnDart 0.7.0-alpha.3 from nuget.org.
+Restore and build against LawnDart 0.7.0-alpha.4 from nuget.org.
 
 ## Run
 
-```powershell
+```bash
 cd src/facts-before-features
 dotnet restore HarborStreet.Samples.slnx
 dotnet build HarborStreet.Samples.slnx
-dotnet run --project smoke-check/HarborStreet.Shell/HarborStreet.Shell.csproj
+dotnet run --project smoke-check/HarborStreet.Shell
 ```
 
 ## GWT
 
-N/A — no domain behavior.
+No domain behavior.
 
 ## What AI must not invent
 

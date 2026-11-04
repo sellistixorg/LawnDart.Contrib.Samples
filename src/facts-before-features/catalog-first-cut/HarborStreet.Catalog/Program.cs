@@ -35,7 +35,7 @@ await repo.HandleCommandAsync(
     new RestockTitleCommand(Guid.NewGuid(), titleId, Quantity: 1));
 
 var title = await repo.GetOrCreateAsync<Title>(titleId);
-Console.WriteLine("Harbor Street — ch05 catalog first cut");
+Console.WriteLine("Harbor Street catalog first cut");
 Console.WriteLine($"  Title: {title.State.Name}");
 Console.WriteLine($"  Price: {title.State.Price:C}");
 Console.WriteLine($"  Available: {title.State.AvailableUnits}");

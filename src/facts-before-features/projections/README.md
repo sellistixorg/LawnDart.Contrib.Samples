@@ -1,38 +1,38 @@
-# ch08 — Projections and read models
+# Projections and read models
 
 ## Objective
 
-Show Harbor Street **read models derived from events**: product catalog, stock dashboard (available / reserved), and order history. Views are not the system of record—clear and `RebuildAsync` replay the same facts.
+Read models built from events: a product catalog, a stock dashboard (available and reserved), and order history. Views are not the record. Clear them and `RebuildAsync` replays the same facts.
 
 ## Run
 
-```powershell
+```bash
 cd src/facts-before-features
-dotnet run --project projections/HarborStreet.Projections/HarborStreet.Projections.csproj
-dotnet test projections/HarborStreet.Projections.Tests/HarborStreet.Projections.Tests.csproj
+dotnet run --project projections/HarborStreet.Projections
+dotnet test projections/HarborStreet.Projections.Tests
 ```
 
-## GWT (projection)
+## GWT
 
 | Given | When | Then |
-|-------|------|------|
-| Title Added (@ 52.00), Restocked(1), Order Placed, Stock Reserved | Rebuild projections | Catalog shows scarce title @ 52.00; stock available=0 reserved=1; order history has the order |
-| Views cleared | Rebuild again | Same catalog / stock / order rows |
+|---|---|---|
+| Title Added (at 52.00), Restocked(1), Order Placed, Stock Reserved | Rebuild projections | Catalog shows the scarce title at 52.00; stock available=0 reserved=1; order history has the order |
+| Views cleared | Rebuild again | Same catalog, stock, and order rows |
 
 ## What AI must not invent
 
-- Using the catalog UI / in-memory store as inventory source of truth  
-- New event types not in the Harbor Street name list  
-- Skipping rebuild/replay when “fixing” a wrong view  
-- Payment or shipping projections in this sample (later chapters)  
+- Treating the catalog view as the inventory record
+- Event types outside the Harbor Street name list
+- Skipping rebuild when a view looks wrong
+- Payment or shipping projections in this sample
 
 ## Layout
 
 ```text
-Events/           Title + Order + Stock facts
+Events/           Title, order, and stock facts
 Views/            CatalogTitleView, StockDashboardRow, OrderHistoryItem
-Projectors/       Apply(IEvent) + ProjectionPipeline.RebuildAsync
-Seeding/          Demo event history for *The Lighthouse Keeper*
+Projectors/       Apply(IEvent) and ProjectionPipeline.RebuildAsync
+Seeding/          Demo event history for The Lighthouse Keeper
 ```
 
-Event names match `docs/models/bookstore-v1/COMMANDS_AND_EVENTS.md`. Decision logic for Place Order lives in the Chapter 10–11 samples; this chapter consumes the facts.
+Event names match [commands and events](../../../docs/models/facts-before-features/bookstore-v1/COMMANDS_AND_EVENTS.md). Place Order decisions live in `checkout-aggregates` and `checkout-dcb`. This sample consumes the facts.

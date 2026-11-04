@@ -1,50 +1,50 @@
-# ch12 — Automations and coordination
+# Payment follow-on
 
 ## Objective
 
-Show **payment follow-on reactions** after Place Order already reserved stock (Chapters 10–11). Capture Payment is not inside the checkout decision.
+Reactions after Place Order has already reserved stock (`checkout-aggregates` or `checkout-dcb`). Capture Payment is not inside the checkout decision.
 
 | Gateway outcome | Reaction |
-|-----------------|----------|
-| Payment Captured | **Start Fulfillment** |
-| Payment Failed | **Cancel Order for Payment Failure** + **Stock Released** |
+|---|---|
+| Payment Captured | Start Fulfillment |
+| Payment Failed | Cancel Order for Payment Failure, and Stock Released |
 
 ## Run
 
-```powershell
+```bash
 cd src/facts-before-features
-dotnet run --project payment-follow-on/HarborStreet.Coordination/HarborStreet.Coordination.csproj
-dotnet test payment-follow-on/HarborStreet.Coordination.Tests/HarborStreet.Coordination.Tests.csproj
+dotnet run --project payment-follow-on/HarborStreet.Coordination
+dotnet test payment-follow-on/HarborStreet.Coordination.Tests
 ```
 
 ## GWT
 
 | Given | When | Then |
-|-------|------|------|
+|---|---|---|
 | Order placed; stock reserved | Capture Payment succeeds | Payment Captured; Fulfillment Started; stock still reserved |
 | Order placed; stock reserved | Capture Payment declines | Payment Failed; Order Cancelled; Stock Released; available back to 1 |
 
-## vs Place Order (Ch 7)
+## Compared with Place Order
 
 | | Place Order | This sample |
-|--|-------------|-------------|
-| Boundary | Checkout decision (agg choreography or DCB) | Reactions after payment facts |
+|---|---|---|
+| Boundary | Checkout decision (aggregate choreography or one dynamic consistency boundary) | Reactions after payment facts |
 | Stock | Reserve on success | Release on payment failure |
-| Payment | Out of scope | Fake gateway → domain commands → reactions |
+| Payment | Out of scope | Fake gateway, then domain commands, then reactions |
 
 ## What AI must not invent
 
-- Putting Capture Payment inside Place Order / DCB checkout  
-- Releasing stock without Order Cancelled (or inventing `InventoryAdjusted`)  
-- Starting fulfillment when payment failed  
-- Distributed 2PC with the payment provider  
+- Putting Capture Payment inside Place Order
+- Releasing stock without Order Cancelled, or inventing `InventoryAdjusted`
+- Starting fulfillment when payment failed
+- A distributed two-phase commit with the payment provider
 
 ## Layout
 
 ```text
-Domain/           Title + Order aggregates
-Payments/         IPaymentGateway + FakePaymentGateway
+Domain/           Title and Order aggregates
+Payments/         IPaymentGateway and FakePaymentGateway
 Reactions/        PaymentFollowOnReactions
-Coordination/     PaymentCaptureService (record fact → react)
-Seeding/          Post-checkout reserved order
+Coordination/     PaymentCaptureService (record the fact, then react)
+Seeding/          A reserved order after checkout
 ```

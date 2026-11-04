@@ -13,7 +13,7 @@ namespace HarborStreet.EndToEnd.Tests;
 
 /// <summary>
 /// Capstone: happy path (place → capture → fulfill) + last-copy race.
-/// GWT: docs/models/bookstore-v1/LAST_COPY_GWT.md + payment follow-on (ch11).
+/// GWT: docs/models/facts-before-features/bookstore-v1/LAST_COPY_GWT.md and payment follow-on.
 /// </summary>
 public class EndToEndTests
 {

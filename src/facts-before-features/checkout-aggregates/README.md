@@ -1,48 +1,48 @@
-# ch10 — Last-copy checkout with traditional aggregates
+# Last-copy checkout with aggregates
 
 ## Objective
 
-Show why **Order + Title as separate aggregates + choreography** struggles with the concurrent last-copy GWT. Same business names as the Event Model; the pain is the multi-stream commit. Pair with `ch11-dcb-checkout` (Chapter 11) for the side-by-side win.
+Order and Title are separate aggregates. A choreography runs the concurrent last-copy scenario. The business names match the event model. The pain is the multi-stream commit. The same scenario in `checkout-dcb` has one winner.
 
 ## Run
 
-```powershell
+```bash
 cd src/facts-before-features
-dotnet run --project checkout-aggregates/HarborStreet.Checkout.Aggregates/HarborStreet.Checkout.Aggregates.csproj
-dotnet test checkout-aggregates/HarborStreet.Checkout.Aggregates.Tests/HarborStreet.Checkout.Aggregates.Tests.csproj
+dotnet run --project checkout-aggregates/HarborStreet.Checkout.Aggregates
+dotnet test checkout-aggregates/HarborStreet.Checkout.Aggregates.Tests
 ```
 
 ## GWT
 
-Source: [`docs/models/bookstore-v1/LAST_COPY_GWT.md`](../../../docs/models/bookstore-v1/LAST_COPY_GWT.md)
+Source: [last-copy scenario](../../../docs/models/facts-before-features/bookstore-v1/LAST_COPY_GWT.md)
 
 | Given | When | Then (desired) | Then (this sample) |
-|-------|------|----------------|--------------------|
-| Title has 1 unit; customers A & B | Concurrent Place Order | Exactly one order + one reservation | **2× Order Placed**, **1× Stock Reserved**, loser `NeedsCompensation` |
-| Title has 1 unit | Sequential Place Order then another | Second rejected unavailable | Same — works when not concurrent |
-| Happy path one customer | Place Order | Order Placed + Stock Reserved; available 0 | Passes |
+|---|---|---|---|
+| Title has 1 unit; customers A and B | Concurrent Place Order | Exactly one order and one reservation | 2 Order Placed, 1 Stock Reserved, loser `NeedsCompensation` |
+| Title has 1 unit | Place Order, then another | Second rejected as unavailable | Works when the two orders are not concurrent |
+| One customer | Place Order | Order Placed and Stock Reserved; available 0 | Passes |
 
-Choreography order (deliberate teaching shape):
+Choreography order:
 
-1. Optimistic read of Title available (both racers may observe the last unit)  
-2. **Place Order** on Order stream  
-3. **Reserve Stock** on Title stream  
+1. Optimistic read of Title available. Both racers may observe the last unit.
+2. Place Order on the Order stream.
+3. Reserve Stock on the Title stream.
 
-The race test models step 1 as a shared stale observation (`skipStockCheck`), then both run steps 2–3. Title stock is not oversold (optimistic concurrency / invariant on Title), but you get an **orphan Order Placed** that needs compensation — the multi-aggregate pain the chapter teaches.
+The race test models step 1 as a shared stale observation (`skipStockCheck`), then both run steps 2 and 3. Title stock is not oversold. You still get an orphan Order Placed that needs compensation.
 
 ## What AI must not invent
 
-- A single aggregate that silently owns both order and stock “to make the test pass” (that hides the chapter lesson)  
-- Distributed locks / DB transactions as the “solution” in this sample  
-- Payment capture inside Place Order (v1 policy: reserve in checkout; pay later)  
-- DCB / `AppendCondition` APIs here — that belongs in `ch11-dcb-checkout`  
+- One aggregate that owns both order and stock so the test passes. That hides the multi-stream pain.
+- Distributed locks or a database transaction as the fix in this sample
+- Payment capture inside Place Order. This model reserves in checkout and pays later.
+- A dynamic consistency boundary or `AppendCondition` here. That lives in `checkout-dcb`.
 
 ## Layout
 
 ```text
 HarborStreet.Checkout.Aggregates/
-  Catalog/     Title aggregate + Stock Reserved
-  Orders/      Order aggregate + Order Placed / Cancelled
+  Catalog/     Title aggregate and Stock Reserved
+  Orders/      Order aggregate, Order Placed, and Cancelled
   Checkout/    AggregateCheckoutChoreography
   Hosting/     DI wiring
 ```

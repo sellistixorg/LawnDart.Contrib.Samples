@@ -7,7 +7,7 @@ using LawnDart.Dcb;
 using LawnDart.EventStore;
 
 // Demo: concurrent Place Order against one scarce unit — DCB exactly-one-winner.
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch12-dcb", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-dcb", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var services = new ServiceCollection();
@@ -44,7 +44,7 @@ var placed = all.Count(e => e.Event is OrderPlaced);
 var reserved = all.Count(e => e.Event is StockReserved);
 var decision = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags);
 
-Console.WriteLine("Harbor Street - ch11 DCB checkout (last-copy race)");
+Console.WriteLine("Harbor Street DCB checkout (last-copy race)");
 Console.WriteLine($"  A: {results[0].Status}");
 Console.WriteLine($"  B: {results[1].Status}");
 Console.WriteLine($"  OrderPlaced events: {placed}");

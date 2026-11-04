@@ -1,0 +1,902 @@
+{
+  "id": "ws-harbor-street-v1",
+  "name": "Harbor Street Books v1",
+  "description": "Event model for Harbor Street Books, the setting of Facts Before Features: catalog through ship, with the last-copy Place Order scenario. Authoritative names: COMMANDS_AND_EVENTS.md. Not all v1 commands are on the board. Overview slices cover the teaching path.",
+  "tags": [
+    "HarborStreet",
+    "bookstore-v1",
+    "FactsBeforeFeatures"
+  ],
+  "widgets": [
+    {
+      "state": [],
+      "type": "entity",
+      "name": "Title",
+      "isAggregateRoot": true,
+      "sliceId": "slice-catalog",
+      "entityType": "AggregateRoot",
+      "id": "ent-title",
+      "description": "Catalog identity; stock quantity for v1",
+      "width": 120,
+      "x": 40,
+      "y": 40,
+      "height": 40,
+      "tags": [
+        "AggregateRoot"
+      ]
+    },
+    {
+      "state": [],
+      "type": "entity",
+      "name": "Cart",
+      "isAggregateRoot": true,
+      "sliceId": "slice-cart",
+      "entityType": "AggregateRoot",
+      "id": "ent-cart",
+      "description": "Pre-commitment selection",
+      "width": 120,
+      "x": 40,
+      "y": 40,
+      "height": 40,
+      "tags": [
+        "AggregateRoot"
+      ]
+    },
+    {
+      "state": [],
+      "type": "entity",
+      "name": "Order",
+      "isAggregateRoot": true,
+      "sliceId": "slice-place-order",
+      "entityType": "AggregateRoot",
+      "id": "ent-order",
+      "description": "Commitment after Place Order; may be refined as DCB decision later",
+      "width": 120,
+      "x": 40,
+      "y": 40,
+      "height": 40,
+      "tags": [
+        "AggregateRoot"
+      ]
+    },
+    {
+      "height": 36,
+      "x": 40,
+      "width": 100,
+      "y": 100,
+      "sliceId": "slice-catalog",
+      "id": "role-clerk",
+      "level": "staff",
+      "name": "Clerk",
+      "type": "role",
+      "permissions": [
+        "Catalog.Manage"
+      ]
+    },
+    {
+      "height": 36,
+      "x": 40,
+      "width": 100,
+      "y": 100,
+      "sliceId": "slice-cart",
+      "id": "role-customer",
+      "level": "customer",
+      "name": "Customer",
+      "type": "role",
+      "permissions": [
+        "Cart.Edit",
+        "Order.Place"
+      ]
+    },
+    {
+      "height": 36,
+      "x": 40,
+      "width": 110,
+      "y": 100,
+      "sliceId": "slice-ship",
+      "id": "role-fulfillment",
+      "level": "staff",
+      "name": "Fulfillment",
+      "type": "role",
+      "permissions": [
+        "Order.Ship"
+      ]
+    },
+    {
+      "height": 40,
+      "x": 40,
+      "width": 140,
+      "y": 160,
+      "sliceId": "slice-catalog",
+      "id": "scr-catalog-admin",
+      "name": "Catalog Admin",
+      "route": "/admin/catalog",
+      "type": "screen",
+      "layout": "form"
+    },
+    {
+      "height": 40,
+      "x": 40,
+      "width": 120,
+      "y": 160,
+      "sliceId": "slice-cart",
+      "id": "scr-cart",
+      "name": "Cart",
+      "route": "/cart",
+      "type": "screen",
+      "layout": "list"
+    },
+    {
+      "height": 40,
+      "x": 40,
+      "width": 120,
+      "y": 160,
+      "sliceId": "slice-place-order",
+      "id": "scr-checkout",
+      "name": "Checkout",
+      "route": "/checkout",
+      "type": "screen",
+      "layout": "form"
+    },
+    {
+      "height": 40,
+      "x": 40,
+      "width": 120,
+      "y": 160,
+      "sliceId": "slice-ship",
+      "id": "scr-order-history",
+      "name": "My Orders",
+      "route": "/orders",
+      "type": "screen",
+      "layout": "list"
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 80,
+      "width": 160,
+      "y": 300,
+      "sliceId": "slice-catalog",
+      "id": "evt-title-added",
+      "description": "Title entered the catalog",
+      "name": "Title Added to Catalog",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-title-added"
+      ],
+      "type": "command",
+      "name": "Add Title to Catalog",
+      "sliceId": "slice-catalog",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-add-title",
+      "aggregateRootId": "ent-title",
+      "description": "",
+      "width": 180,
+      "x": 80,
+      "y": 220,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "events": [
+        "evt-title-restocked"
+      ],
+      "type": "command",
+      "name": "Restock Title",
+      "sliceId": "slice-catalog",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-restock-title",
+      "aggregateRootId": "ent-title",
+      "description": "Increase available stock",
+      "width": 160,
+      "x": 80,
+      "y": 380,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 80,
+      "width": 150,
+      "y": 450,
+      "sliceId": "slice-catalog",
+      "id": "evt-title-restocked",
+      "description": "",
+      "name": "Title Restocked",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-title-marked-scarce"
+      ],
+      "type": "command",
+      "name": "Mark Title Scarce",
+      "sliceId": "slice-catalog",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-mark-title-scarce",
+      "aggregateRootId": "ent-title",
+      "description": "Last-unit races matter for this title",
+      "width": 160,
+      "x": 80,
+      "y": 520,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 80,
+      "width": 160,
+      "y": 590,
+      "sliceId": "slice-catalog",
+      "id": "evt-title-marked-scarce",
+      "description": "",
+      "name": "Title Marked Scarce",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "requiredPermissions": [],
+      "height": 40,
+      "x": 80,
+      "width": 160,
+      "y": 670,
+      "events": [
+        "evt-title-added",
+        "evt-title-restocked",
+        "evt-title-marked-scarce"
+      ],
+      "sliceId": "slice-catalog",
+      "id": "view-product-catalog",
+      "name": "Product Catalog",
+      "type": "view",
+      "dataSource": "",
+      "template": ""
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 420,
+      "width": 160,
+      "y": 300,
+      "sliceId": "slice-cart",
+      "id": "evt-cart-opened",
+      "description": "",
+      "name": "Cart Opened",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-cart-opened"
+      ],
+      "type": "command",
+      "name": "Open Cart",
+      "sliceId": "slice-cart",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-open-cart",
+      "aggregateRootId": "ent-cart",
+      "description": "",
+      "width": 180,
+      "x": 420,
+      "y": 220,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "events": [
+        "evt-title-added-to-cart"
+      ],
+      "type": "command",
+      "name": "Add Title to Cart",
+      "sliceId": "slice-cart",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-add-title-to-cart",
+      "aggregateRootId": "ent-cart",
+      "description": "",
+      "width": 170,
+      "x": 420,
+      "y": 380,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 420,
+      "width": 170,
+      "y": 450,
+      "sliceId": "slice-cart",
+      "id": "evt-title-added-to-cart",
+      "description": "",
+      "name": "Title Added to Cart",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-order-placed",
+        "evt-stock-reserved"
+      ],
+      "type": "command",
+      "name": "Place Order",
+      "sliceId": "slice-place-order",
+      "handler": "",
+      "requiredPermissions": [
+        "Order.Place"
+      ],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-place-order",
+      "aggregateRootId": "ent-order",
+      "description": "Checkout decision: create order and reserve scarce stock together (v1 policy).",
+      "width": 180,
+      "x": 760,
+      "y": 220,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 760,
+      "width": 150,
+      "y": 300,
+      "sliceId": "slice-place-order",
+      "id": "evt-order-placed",
+      "description": "Order commitment recorded",
+      "name": "Order Placed",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 930,
+      "width": 150,
+      "y": 300,
+      "sliceId": "slice-place-order",
+      "id": "evt-stock-reserved",
+      "description": "Available unit held for the order",
+      "name": "Stock Reserved",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "height": 40,
+      "x": 760,
+      "width": 170,
+      "y": 380,
+      "sliceId": "slice-place-order",
+      "id": "err-title-unavailable",
+      "description": "Including last copy already taken",
+      "errorCode": "TITLE_UNAVAILABLE",
+      "name": "Title Unavailable",
+      "severity": "high",
+      "type": "error"
+    },
+    {
+      "whenCommandId": "cmd-place-order",
+      "type": "gwt",
+      "name": "Last Copy Concurrent Checkout",
+      "givenEvents": [
+        "evt-title-added",
+        "evt-title-marked-scarce",
+        "evt-title-restocked",
+        "evt-cart-opened",
+        "evt-title-added-to-cart"
+      ],
+      "sliceId": "slice-place-order",
+      "thenErrorId": "err-title-unavailable",
+      "id": "gwt-last-copy-checkout",
+      "description": "See LAST_COPY_GWT.md: exactly one of two concurrent Place Order attempts succeeds.",
+      "width": 280,
+      "x": 760,
+      "y": 460,
+      "thenEvents": [
+        "evt-order-placed",
+        "evt-stock-reserved"
+      ],
+      "height": 120
+    },
+    {
+      "requiredPermissions": [],
+      "height": 40,
+      "x": 760,
+      "width": 150,
+      "y": 620,
+      "events": [
+        "evt-order-placed",
+        "evt-payment-captured",
+        "evt-order-shipped"
+      ],
+      "sliceId": "slice-place-order",
+      "id": "view-order-history",
+      "name": "Order History",
+      "type": "view",
+      "dataSource": "",
+      "template": ""
+    },
+    {
+      "requiredPermissions": [],
+      "height": 40,
+      "x": 930,
+      "width": 150,
+      "y": 620,
+      "events": [
+        "evt-title-restocked",
+        "evt-stock-reserved",
+        "evt-stock-released"
+      ],
+      "sliceId": "slice-place-order",
+      "id": "view-stock-dashboard",
+      "name": "Stock Dashboard",
+      "type": "view",
+      "dataSource": "",
+      "template": ""
+    },
+    {
+      "height": 40,
+      "x": 1200,
+      "width": 150,
+      "y": 100,
+      "sliceId": "slice-payment",
+      "id": "ext-payment-gateway",
+      "description": "Fake port in samples; capture is follow-on",
+      "name": "Payment Gateway",
+      "type": "external"
+    },
+    {
+      "events": [
+        "evt-payment-captured"
+      ],
+      "type": "command",
+      "name": "Capture Payment",
+      "sliceId": "slice-payment",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": true,
+      "state": [],
+      "id": "cmd-capture-payment",
+      "aggregateRootId": "ent-order",
+      "description": "Follow-on after successful Place Order",
+      "width": 170,
+      "x": 1200,
+      "y": 220,
+      "triggerSources": [
+        "System Process"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 1200,
+      "width": 160,
+      "y": 300,
+      "sliceId": "slice-payment",
+      "id": "evt-payment-captured",
+      "description": "",
+      "name": "Payment Captured",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-order-cancelled",
+        "evt-stock-released"
+      ],
+      "type": "command",
+      "name": "Cancel Order for Payment Failure",
+      "sliceId": "slice-payment",
+      "handler": "",
+      "requiredPermissions": [],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-cancel-order-payment-failure",
+      "aggregateRootId": "ent-order",
+      "description": "Compensation when payment fails",
+      "width": 220,
+      "x": 1200,
+      "y": 380,
+      "triggerSources": [
+        "System Process"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 1200,
+      "width": 150,
+      "y": 460,
+      "sliceId": "slice-payment",
+      "id": "evt-order-cancelled",
+      "description": "",
+      "name": "Order Cancelled",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 1370,
+      "width": 150,
+      "y": 460,
+      "sliceId": "slice-payment",
+      "id": "evt-stock-released",
+      "description": "Reserved quantity returned to available",
+      "name": "Stock Released",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-fulfillment-started"
+      ],
+      "type": "command",
+      "name": "Start Fulfillment",
+      "sliceId": "slice-ship",
+      "handler": "",
+      "requiredPermissions": [
+        "Order.Ship"
+      ],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-start-fulfillment",
+      "aggregateRootId": "ent-order",
+      "description": "",
+      "width": 170,
+      "x": 1600,
+      "y": 220,
+      "triggerSources": [
+        "User Action",
+        "System Process"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 1600,
+      "width": 160,
+      "y": 300,
+      "sliceId": "slice-ship",
+      "id": "evt-fulfillment-started",
+      "description": "",
+      "name": "Fulfillment Started",
+      "state": [],
+      "type": "event"
+    },
+    {
+      "events": [
+        "evt-order-shipped"
+      ],
+      "type": "command",
+      "name": "Mark Order Shipped",
+      "sliceId": "slice-ship",
+      "handler": "",
+      "requiredPermissions": [
+        "Order.Ship"
+      ],
+      "isAsync": false,
+      "state": [],
+      "id": "cmd-mark-order-shipped",
+      "aggregateRootId": "ent-order",
+      "description": "",
+      "width": 170,
+      "x": 1600,
+      "y": 380,
+      "triggerSources": [
+        "User Action"
+      ],
+      "height": 44
+    },
+    {
+      "eventType": "Domain",
+      "height": 40,
+      "x": 1600,
+      "width": 150,
+      "y": 450,
+      "sliceId": "slice-ship",
+      "id": "evt-order-shipped",
+      "description": "",
+      "name": "Order Shipped",
+      "state": [],
+      "type": "event"
+    }
+  ],
+  "swimlanes": [
+    {
+      "id": "slice-catalog",
+      "type": "vertical",
+      "name": "Catalog",
+      "position": 40,
+      "width": 340,
+      "order": 0,
+      "commands": [
+        "cmd-add-title",
+        "cmd-restock-title",
+        "cmd-mark-title-scarce"
+      ],
+      "events": [
+        "evt-title-added",
+        "evt-title-restocked",
+        "evt-title-marked-scarce"
+      ],
+      "views": [
+        "view-product-catalog"
+      ],
+      "screens": [
+        "scr-catalog-admin"
+      ],
+      "entities": [
+        "ent-title"
+      ],
+      "roles": [
+        "role-clerk"
+      ],
+      "processes": [],
+      "gwts": [],
+      "errors": [],
+      "externals": [],
+      "questions": []
+    },
+    {
+      "id": "slice-cart",
+      "type": "vertical",
+      "name": "Cart",
+      "position": 400,
+      "width": 320,
+      "order": 1,
+      "commands": [
+        "cmd-open-cart",
+        "cmd-add-title-to-cart"
+      ],
+      "events": [
+        "evt-cart-opened",
+        "evt-title-added-to-cart"
+      ],
+      "views": [],
+      "screens": [
+        "scr-cart"
+      ],
+      "entities": [
+        "ent-cart"
+      ],
+      "roles": [
+        "role-customer"
+      ],
+      "processes": [],
+      "gwts": [],
+      "errors": [],
+      "externals": [],
+      "questions": []
+    },
+    {
+      "id": "slice-place-order",
+      "type": "vertical",
+      "name": "Place Order",
+      "position": 740,
+      "width": 380,
+      "order": 2,
+      "commands": [
+        "cmd-place-order"
+      ],
+      "events": [
+        "evt-order-placed",
+        "evt-stock-reserved"
+      ],
+      "views": [
+        "view-order-history",
+        "view-stock-dashboard"
+      ],
+      "screens": [
+        "scr-checkout"
+      ],
+      "entities": [
+        "ent-order"
+      ],
+      "roles": [
+        "role-customer"
+      ],
+      "processes": [],
+      "gwts": [
+        "gwt-last-copy-checkout"
+      ],
+      "errors": [
+        "err-title-unavailable"
+      ],
+      "externals": [],
+      "questions": []
+    },
+    {
+      "id": "slice-payment",
+      "type": "vertical",
+      "name": "Capture Payment",
+      "position": 1160,
+      "width": 380,
+      "order": 3,
+      "commands": [
+        "cmd-capture-payment",
+        "cmd-cancel-order-payment-failure"
+      ],
+      "events": [
+        "evt-payment-captured",
+        "evt-order-cancelled",
+        "evt-stock-released"
+      ],
+      "views": [],
+      "screens": [],
+      "entities": [],
+      "roles": [],
+      "processes": [],
+      "gwts": [],
+      "errors": [],
+      "externals": [
+        "ext-payment-gateway"
+      ],
+      "questions": []
+    },
+    {
+      "id": "slice-ship",
+      "type": "vertical",
+      "name": "Ship",
+      "position": 1580,
+      "width": 320,
+      "order": 4,
+      "commands": [
+        "cmd-start-fulfillment",
+        "cmd-mark-order-shipped"
+      ],
+      "events": [
+        "evt-fulfillment-started",
+        "evt-order-shipped"
+      ],
+      "views": [],
+      "screens": [
+        "scr-order-history"
+      ],
+      "entities": [],
+      "roles": [
+        "role-fulfillment"
+      ],
+      "processes": [],
+      "gwts": [],
+      "errors": [],
+      "externals": [],
+      "questions": []
+    }
+  ],
+  "groups": [],
+  "connections": [
+    {
+      "id": "conn-cmd-add-title-evt-title-added",
+      "sourceId": "cmd-add-title",
+      "targetId": "evt-title-added",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-restock-title-evt-title-restocked",
+      "sourceId": "cmd-restock-title",
+      "targetId": "evt-title-restocked",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-mark-title-scarce-evt-title-marked-scarce",
+      "sourceId": "cmd-mark-title-scarce",
+      "targetId": "evt-title-marked-scarce",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-open-cart-evt-cart-opened",
+      "sourceId": "cmd-open-cart",
+      "targetId": "evt-cart-opened",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-add-title-to-cart-evt-title-added-to-cart",
+      "sourceId": "cmd-add-title-to-cart",
+      "targetId": "evt-title-added-to-cart",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-place-order-evt-order-placed",
+      "sourceId": "cmd-place-order",
+      "targetId": "evt-order-placed",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-place-order-evt-stock-reserved",
+      "sourceId": "cmd-place-order",
+      "targetId": "evt-stock-reserved",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-place-order-gwt-last-copy-checkout",
+      "sourceId": "cmd-place-order",
+      "targetId": "gwt-last-copy-checkout",
+      "type": "flow",
+      "label": "when"
+    },
+    {
+      "id": "conn-err-title-unavailable-gwt-last-copy-checkout",
+      "sourceId": "err-title-unavailable",
+      "targetId": "gwt-last-copy-checkout",
+      "type": "flow",
+      "label": "then (loser)"
+    },
+    {
+      "id": "conn-cmd-capture-payment-evt-payment-captured",
+      "sourceId": "cmd-capture-payment",
+      "targetId": "evt-payment-captured",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-cancel-order-payment-failure-evt-order-cancelled",
+      "sourceId": "cmd-cancel-order-payment-failure",
+      "targetId": "evt-order-cancelled",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-cancel-order-payment-failure-evt-stock-released",
+      "sourceId": "cmd-cancel-order-payment-failure",
+      "targetId": "evt-stock-released",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-start-fulfillment-evt-fulfillment-started",
+      "sourceId": "cmd-start-fulfillment",
+      "targetId": "evt-fulfillment-started",
+      "type": "command-event"
+    },
+    {
+      "id": "conn-cmd-mark-order-shipped-evt-order-shipped",
+      "sourceId": "cmd-mark-order-shipped",
+      "targetId": "evt-order-shipped",
+      "type": "command-event"
+    }
+  ],
+  "enumerations": [],
+  "ruleSets": [],
+  "sequenceLayout": {
+    "mode": "default"
+  },
+  "settings": {},
+  "lastModified": 1785864854204,
+  "accountId": 0,
+  "projectId": 0,
+  "projectName": "Harbor Street Books"
+}

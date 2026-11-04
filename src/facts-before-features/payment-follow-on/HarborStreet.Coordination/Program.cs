@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using LawnDart.Aggregates;
 using LawnDart.EventStore;
 
-var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-ch12", Guid.NewGuid().ToString("N"));
+var dataDir = Path.Combine(Path.GetTempPath(), "harbor-street-payment", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(dataDir);
 
 var gateway = new FakePaymentGateway { NextCaptureSucceeds = false };
@@ -27,7 +27,7 @@ var customerId = Guid.Parse("a0000000-0000-0000-0000-000000000001");
 await CheckoutSeed.SeedReservedOrderAsync(repo, titleId, orderId, customerId);
 
 var titleBefore = await repo.GetOrCreateAsync<Title>(titleId);
-Console.WriteLine("Harbor Street - ch12 coordination (payment failure → release)");
+Console.WriteLine("Harbor Street payment follow-on (payment failure, then release)");
 Console.WriteLine($"  Before capture: available={titleBefore.State.AvailableUnits} reserved={titleBefore.State.ReservedUnits}");
 
 await payments.CaptureAsync(orderId, amount: 52.00m);

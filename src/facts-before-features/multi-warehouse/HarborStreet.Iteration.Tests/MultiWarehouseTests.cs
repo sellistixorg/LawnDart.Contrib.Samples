@@ -9,7 +9,7 @@ using Xunit;
 namespace HarborStreet.Iteration.Tests;
 
 /// <summary>
-/// Model v2 — multi-warehouse stock. GWT: docs/models/bookstore-v2/MULTI_WAREHOUSE_GWT.md
+/// Model v2, multi-warehouse stock. GWT: docs/models/facts-before-features/bookstore-v2/MULTI_WAREHOUSE_GWT.md
 /// </summary>
 public class MultiWarehouseTests
 {
