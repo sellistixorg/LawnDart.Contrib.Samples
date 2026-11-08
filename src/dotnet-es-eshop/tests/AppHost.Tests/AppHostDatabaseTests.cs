@@ -24,6 +24,12 @@ public class AppHostDatabaseTests
 
     private static readonly string[] Projects =
     [
+        "identity-schema",
+        "basket-schema",
+        "catalog-schema",
+        "ordering-schema",
+        "payment-schema",
+        "webhooks-schema",
         "identity-api",
         "basket-api",
         "catalog-api",
@@ -33,6 +39,17 @@ public class AppHostDatabaseTests
         "webhooks-api",
         "webhooksclient",
         "webapp"
+    ];
+
+    private static readonly (string Service, string Schema)[] SchemaWaits =
+    [
+        ("identity-api", "identity-schema"),
+        ("basket-api", "basket-schema"),
+        ("catalog-api", "catalog-schema"),
+        ("ordering-api", "ordering-schema"),
+        ("order-processor", "ordering-schema"),
+        ("payment-processor", "payment-schema"),
+        ("webhooks-api", "webhooks-schema")
     ];
 
     [Fact]
@@ -139,6 +156,30 @@ public class AppHostDatabaseTests
                 values.TryGetValue(EShopDatabaseEnvironment.VariableName, out var value),
                 project.Name + " should get " + EShopDatabaseEnvironment.VariableName + ".");
             Assert.Equal(database.ToString(), value);
+        }
+
+        await AssertSchemaSetupAsync(builder);
+    }
+
+    private static async Task AssertSchemaSetupAsync(IDistributedApplicationTestingBuilder builder)
+    {
+        Assert.DoesNotContain(builder.Resources.OfType<ProjectResource>(), project => project.Name == "order-processor-schema");
+
+        foreach (var name in Projects.Where(project => project.EndsWith("-schema", StringComparison.Ordinal)))
+        {
+            var project = Assert.Single(builder.Resources.OfType<ProjectResource>(), resource => resource.Name == name);
+            var args = await ((IResourceWithArgs)project).GetArgumentValuesAsync(DistributedApplicationOperation.Publish);
+            Assert.Contains(EShopSchemaSetup.Argument, args);
+        }
+
+        foreach (var (service, schema) in SchemaWaits)
+        {
+            var project = Assert.Single(builder.Resources.OfType<ProjectResource>(), resource => resource.Name == service);
+            Assert.Contains(
+                project.Annotations,
+                annotation => annotation is WaitAnnotation wait
+                    && wait.Resource.Name == schema
+                    && wait.WaitType == WaitType.WaitForCompletion);
         }
     }
 

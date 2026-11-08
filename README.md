@@ -45,6 +45,14 @@ The AppHost passes that choice to every service as `EShop__Database`. A service 
 
 SQL Server uses the image `mcr.microsoft.com/mssql/server:2025-latest`. Postgres uses the image `postgres:15.15`. Each container keeps its own data volume. Switching from one database to the other does not move data.
 
+The AppHost runs a setup command once for each database before the services start. That command creates the tables and exits. `orderingdb` has one setup command. Ordering and Order Processor both wait for it. A service started on its own uses the same command:
+
+```bash
+dotnet run --project Catalog.API -- --setup-schema
+```
+
+Identity's setup command also creates the login tables. After that, startup checks the tables and stops when they are missing. Startup does not create tables. The setup command does not seed shoppers or catalog items.
+
 ## RabbitMQ management
 
 On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. Sign in as `guest`. The password is the generated `eventbus-password` parameter on that resource. The same password is in the `eventbus` connection string.

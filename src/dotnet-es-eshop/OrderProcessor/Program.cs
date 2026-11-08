@@ -1,6 +1,13 @@
 using System.Reflection;
 using LawnDart.Samples.EShop.Infrastructure;
 
+if (EShopSchemaSetup.IsRequested(args))
+{
+    throw new InvalidOperationException(
+        "Order Processor does not create tables. " +
+        "Run Ordering.API with " + EShopSchemaSetup.Argument + " for orderingdb, then start Order Processor.");
+}
+
 var builder = Host.CreateApplicationBuilder(args);
 builder.Configuration.AddEShopDatabaseLaunchOption(args);
 
@@ -20,6 +27,6 @@ builder.AddEShopSlices(processorAssembly);
 
 var host = builder.Build();
 
-await host.InitializeEShopLawnDartSchemaAsync();
+await host.VerifyEShopLawnDartSchemaAsync();
 
 host.Run();

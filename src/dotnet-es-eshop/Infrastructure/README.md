@@ -8,7 +8,11 @@ Shared LawnDart host registration for eShop services that own an Aspire database
 
 Call `AddEShopLawnDart` from the service host. Pass the Aspire SQL connection name (`catalogdb`, `basketdb`, and the other names in `EShopDatabases`). Pass the service hook (`AddCatalogContext`, and the rest). Pass a subscription name from `EShopServiceNames` when the host has the Aspire `eventbus` reference.
 
-Call `InitializeEShopLawnDartSchemaAsync` after `Build` and before the host runs. That calls LawnDart `InitializeSchemaAsync` for the event log, transactional outbox, view store, checkpoints, and durable inbox. The calls are idempotent. LawnDart has no versioned migrator.
+Create the tables with `--setup-schema`. That command calls `InitializeEShopLawnDartSchemaAsync`, which calls LawnDart `InitializeSchemaAsync` for the event log, transactional outbox, view store, checkpoints, and durable inbox. A second run leaves the tables and rows as they are. The command exits before the host runs, so seeders do not run.
+
+Normal startup calls `VerifyEShopLawnDartSchemaAsync`. That reads the tables and stops when they are missing. It does not create tables.
+
+The AppHost runs one setup command for each database, then starts the service. `orderingdb` has one setup command. Ordering.API and Order Processor both wait for it. Order Processor does not create tables.
 
 ```csharp
 builder.AddServiceDefaults();
@@ -18,7 +22,7 @@ builder.AddEShopLawnDart(
     EShopServiceNames.Catalog);
 
 var app = builder.Build();
-await app.InitializeEShopLawnDartSchemaAsync();
+await app.VerifyEShopLawnDartSchemaAsync();
 app.MapDefaultEndpoints();
 app.Run();
 ```
@@ -89,7 +93,7 @@ LawnDart resolves the SQL event store only after `WithEventTypes`. An empty hook
 
 Identity maps a demo auth stand-in: `GET /identity/callbacks` and `POST /identity/demo-token`. The token is the literal `demo-token`. It does not authenticate a caller. Account slices replace it. Callback URLs come from the AppHost environment names `BasketApiClient`, `OrderingApiClient`, `WebhooksApiClient`, `WebhooksWebClient`, and `WebAppClient`.
 
-Identity opens `identitylogindb` for the ASP.NET Core Identity login store. `identitydb` stays the LawnDart event log. Startup calls `Database.EnsureCreatedAsync` on the login database. This repo does not ship an EF migration for it. The same startup creates `ShopperSigningKeys` when that table is missing and inserts one RSA private key when the table is empty. The key is not in source. A restart reads the same row. Identity publishes the public key at `GET /.well-known/jwks.json`.
+Identity opens `identitylogindb` for the ASP.NET Core Identity login store. `identitydb` stays the LawnDart event log. The setup command calls `Database.EnsureCreatedAsync` on the login database and creates `ShopperSigningKeys` when that table is missing. It inserts one RSA private key when the table is empty. The key is not in source. A later start reads the same row. Normal startup only checks that the login tables are present. Identity publishes the public key at `GET /.well-known/jwks.json`.
 
 Sign In Shopper returns a one-hour RSA JWT. `sub` is the shopper account id. `name` is the display name. Basket and Ordering call `AddShopperBearerAccess` and read `Identity:Url` (`Identity__Url` from the Identity endpoint in AppHost). They check the issuer, the audience, the lifetime, and the signature. Shopper routes require that bearer token. The gate runs after routing and uses the matched route pattern, so a trailing slash does not skip it. A buyer id or account id that is not `sub` gets 403. A shopper command with no buyer or account id gets 400. A body over 64 KB gets 413. A body that is not UTF-8 gets 415. Register Shopper and Sign In Shopper stay anonymous. Catalog routes are not on this gate. Cancel order requires the token and the order buyer must be `sub`. Mark paid, ship, stock confirmed, awaiting validation, and cancel for insufficient stock return 404 over HTTP. Reactors still call those handlers in process. LawnDart command mapping has no endpoint filter, so the check is middleware registered with the host. Identity publishes `GET /.well-known/openid-configuration` with `jwks_uri`. Basket and Ordering load that JWKS asynchronously. A failed fetch waits 30 seconds before another try.
 

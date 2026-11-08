@@ -92,8 +92,9 @@ public static class EShopLawnDartHost
     /// Projection stores are already registered when the hook runs.
     /// </para>
     /// <para>
-    /// Call <see cref="InitializeEShopLawnDartSchemaAsync(IServiceProvider, CancellationToken)"/>
-    /// after the host is built and before it runs.
+    /// The setup command calls <see cref="InitializeEShopLawnDartSchemaAsync(IServiceProvider, CancellationToken)"/>.
+    /// Normal startup calls <see cref="VerifyEShopLawnDartSchemaAsync(IServiceProvider, CancellationToken)"/>
+    /// and does not create tables.
     /// </para>
     /// </remarks>
     public static TBuilder AddEShopLawnDart<TBuilder>(
@@ -172,7 +173,9 @@ public static class EShopLawnDartHost
     /// <summary>
     /// Creates the LawnDart tables for the event log, outbox, views, checkpoints, and inbox
     /// on the database the host was registered with.
-    /// Idempotent. LawnDart exposes <c>InitializeSchemaAsync</c>, not a versioned migrator.
+    /// The <c>--setup-schema</c> command calls this once. Normal startup does not.
+    /// A second call leaves the tables and rows as they are.
+    /// LawnDart exposes <c>InitializeSchemaAsync</c> for that step.
     /// </summary>
     public static Task InitializeEShopLawnDartSchemaAsync(
         this IHost host,
@@ -236,6 +239,93 @@ public static class EShopLawnDartHost
             "LawnDart {Database} schema is ready for context {ContextName}.",
             DisplayName(database),
             ContextName);
+    }
+
+    /// <summary>
+    /// Reads the LawnDart tables and stops when they are missing or do not match this version.
+    /// Does not create or change tables.
+    /// </summary>
+    /// <param name="host">Built service host.</param>
+    /// <param name="cancellationToken">Token used to cancel the check.</param>
+    public static Task VerifyEShopLawnDartSchemaAsync(
+        this IHost host,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        return host.Services.VerifyEShopLawnDartSchemaAsync(cancellationToken);
+    }
+
+    /// <inheritdoc cref="VerifyEShopLawnDartSchemaAsync(IHost, CancellationToken)"/>
+    public static async Task VerifyEShopLawnDartSchemaAsync(
+        this IServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var store = services.GetRequiredKeyedService<IEventStore>(ContextName);
+        var database = store switch
+        {
+            SqlServerEventStore => EShopDatabase.SqlServer,
+            PostgresEventStore => EShopDatabase.Postgres,
+            _ => throw new InvalidOperationException(
+                $"Context '{ContextName}' resolved {store.GetType().Name}, not SqlServerEventStore or PostgresEventStore. " +
+                "Call AddEShopLawnDart before VerifyEShopLawnDartSchemaAsync.")
+        };
+
+        if (database == EShopDatabase.SqlServer)
+        {
+            RequireMatch(
+                await services.VerifySqlServerEventStoreAsync(ContextName, cancellationToken).ConfigureAwait(false),
+                database,
+                "event store");
+            RequireMatch(
+                await services.GetRequiredKeyedService<IOutboxWriter>(ContextName)
+                    .VerifySchemaAsync(cancellationToken).ConfigureAwait(false),
+                database,
+                "outbox");
+            RequireMatch(
+                await services.VerifySqlProjectionStoresAsync(ContextName, cancellationToken).ConfigureAwait(false),
+                database,
+                "views and checkpoints");
+            RequireMatch(
+                await services.VerifySqlInboxStoreAsync(cancellationToken).ConfigureAwait(false),
+                database,
+                "inbox");
+            return;
+        }
+
+        RequireMatch(
+            await services.VerifyPostgresEventStoreAsync(ContextName, cancellationToken).ConfigureAwait(false),
+            database,
+            "event store");
+        RequireMatch(
+            await services.GetRequiredKeyedService<IOutboxWriter>(ContextName)
+                .VerifySchemaAsync(cancellationToken).ConfigureAwait(false),
+            database,
+            "outbox");
+        RequireMatch(
+            await services.VerifyPostgresProjectionStoresAsync(ContextName, cancellationToken).ConfigureAwait(false),
+            database,
+            "views and checkpoints");
+        RequireMatch(
+            await services.VerifyPostgresInboxStoreAsync(cancellationToken).ConfigureAwait(false),
+            database,
+            "inbox");
+    }
+
+    private static void RequireMatch(SchemaCheckResult result, EShopDatabase database, string part)
+    {
+        if (result.Matches)
+            return;
+
+        var detail = result.Missing.Count > 0
+            ? "missing " + string.Join(", ", result.Missing)
+            : "format stamp '" + (result.FoundFormat ?? "(none)") + "' does not match '" +
+              (result.ExpectedFormat ?? "(none)") + "'";
+        throw new InvalidOperationException(
+            "The " + DisplayName(database) + " " + part + " schema is not ready: " + detail + ". " +
+            "Run this service with " + EShopSchemaSetup.Argument + " before starting it. " +
+            "Startup does not create tables.");
     }
 
     private static string DisplayName(EShopDatabase database) =>

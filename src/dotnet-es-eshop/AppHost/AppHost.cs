@@ -42,11 +42,35 @@ var webhooksDb = addDatabase(EShopDatabases.Webhooks);
 
 var launchProfileName = ShouldUseHttpForEndpoints() ? "http" : "https";
 
+// One setup command per database. It creates tables and exits.
+// The service then only checks those tables. orderingdb has one setup command.
+// Ordering.API and Order Processor both wait for it.
+var identitySchema = AddSchemaSetup(
+    builder.AddProject<Projects.LawnDart_Samples_EShop_Identity_API>("identity-schema"),
+    identityDb,
+    identityLoginDb);
+var basketSchema = AddSchemaSetup(
+    builder.AddProject<Projects.LawnDart_Samples_EShop_Basket_API>("basket-schema"),
+    basketDb);
+var catalogSchema = AddSchemaSetup(
+    builder.AddProject<Projects.LawnDart_Samples_EShop_Catalog_API>("catalog-schema"),
+    catalogDb);
+var orderingSchema = AddSchemaSetup(
+    builder.AddProject<Projects.LawnDart_Samples_EShop_Ordering_API>("ordering-schema"),
+    orderingDb);
+var paymentSchema = AddSchemaSetup(
+    builder.AddProject<Projects.LawnDart_Samples_EShop_PaymentProcessor>("payment-schema"),
+    paymentDb);
+var webhooksSchema = AddSchemaSetup(
+    builder.AddProject<Projects.LawnDart_Samples_EShop_Webhooks_API>("webhooks-schema"),
+    webhooksDb);
+
 // Service projects. Each API hosts its slices under Slices/.
 var identityApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Identity_API>("identity-api")
     .WithExternalHttpEndpoints()
     .WithReference(identityDb).WaitFor(identityDb)
     .WithReference(identityLoginDb).WaitFor(identityLoginDb)
+    .WaitForCompletion(identitySchema)
     .WithHttpHealthCheck("/health");
 
 var identityEndpoint = identityApi.GetEndpoint(launchProfileName);
@@ -55,6 +79,7 @@ var basketApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Basket_API>("
     .WithReference(redis) // Redis IViewStore is deferred. Basket keeps its views in the database.
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(basketDb).WaitFor(basketDb)
+    .WaitForCompletion(basketSchema)
     .WithHttpHealthCheck("/health")
     .WithEnvironment("Identity__Url", identityEndpoint);
 redis.WithParentRelationship(basketApi);
@@ -62,27 +87,32 @@ redis.WithParentRelationship(basketApi);
 var catalogApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Catalog_API>("catalog-api")
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(catalogDb).WaitFor(catalogDb)
+    .WaitForCompletion(catalogSchema)
     .WithHttpHealthCheck("/health");
 
 var orderingApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Ordering_API>("ordering-api")
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(orderingDb).WaitFor(orderingDb)
+    .WaitForCompletion(orderingSchema)
     .WithHttpHealthCheck("/health")
     .WithEnvironment("Identity__Url", identityEndpoint);
 
 builder.AddProject<Projects.LawnDart_Samples_EShop_OrderProcessor>("order-processor")
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(orderingDb).WaitFor(orderingDb)
+    .WaitForCompletion(orderingSchema)
     .WaitFor(orderingApi);
 
 builder.AddProject<Projects.LawnDart_Samples_EShop_PaymentProcessor>("payment-processor")
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(paymentDb).WaitFor(paymentDb)
+    .WaitForCompletion(paymentSchema)
     .WithHttpHealthCheck("/health");
 
 var webHooksApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Webhooks_API>("webhooks-api")
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(webhooksDb).WaitFor(webhooksDb)
+    .WaitForCompletion(webhooksSchema)
     .WithHttpHealthCheck("/health")
     .WithEnvironment("Identity__Url", identityEndpoint);
 
@@ -140,6 +170,16 @@ static Func<string, IResourceBuilder<IResourceWithConnectionString>> AddDatabase
         .WithDataVolume()
         .WithLifetime(ContainerLifetime.Persistent);
     return name => sql.AddDatabase(name);
+}
+
+static IResourceBuilder<ProjectResource> AddSchemaSetup(
+    IResourceBuilder<ProjectResource> project,
+    params IResourceBuilder<IResourceWithConnectionString>[] databases)
+{
+    project.WithArgs(EShopSchemaSetup.Argument);
+    foreach (var database in databases)
+        project = project.WithReference(database).WaitFor(database);
+    return project;
 }
 
 static bool ShouldUseHttpForEndpoints()
