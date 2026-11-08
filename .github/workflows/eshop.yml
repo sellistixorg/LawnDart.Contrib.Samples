@@ -1,5 +1,5 @@
 # Restores, builds, and tests src/dotnet-es-eshop/LawnDart.Samples.EShop.sln.
-# Runs on every pull request to main and every push to main. No path filter:
+# Runs on every pull request and every push to main. No path filter:
 # a solution-level build picks up new slice projects without editing this file.
 #
 # RabbitMQ is a service container and ESHOP_REQUIRE_RABBITMQ=1 is set.
@@ -18,7 +18,6 @@ name: eShop
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
