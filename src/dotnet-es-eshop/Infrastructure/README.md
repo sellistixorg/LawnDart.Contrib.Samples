@@ -12,7 +12,7 @@ Create the tables with `--setup-schema`. That command calls `InitializeEShopLawn
 
 Normal startup calls `VerifyEShopLawnDartSchemaAsync`. That reads the tables and stops when they are missing. It does not create tables.
 
-The AppHost runs one setup command for each database, then starts the service. `orderingdb` has one setup command. Ordering.API and Order Processor both wait for it. Order Processor does not create tables.
+The AppHost runs one setup command for each database, then starts the service. `orderingdb` has one setup command. Ordering.API and Order Processor both wait for it. Order Processor does not create tables. It registers the shared integration events, including `order-started` and `grace-period-confirmed`. Ordering.API setup already records those types.
 
 ```csharp
 builder.AddServiceDefaults();

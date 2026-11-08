@@ -215,7 +215,7 @@ public class EShopHostScopeValidationTests
         builder.AddServiceDefaults();
         builder.AddEShopLawnDart(
             EShopDatabases.Ordering,
-            context => context.AddOrderProcessorContext(),
+            context => context.AddOrderProcessorContext(typeof(OrderStarted).Assembly),
             EShopServiceNames.OrderProcessor,
             enableOutbox: false);
         builder.Services.AddEShopAutomationShell(EShopServiceNames.OrderProcessor);
