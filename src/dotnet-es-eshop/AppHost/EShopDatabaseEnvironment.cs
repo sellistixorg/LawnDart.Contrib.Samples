@@ -17,5 +17,5 @@ public static class EShopDatabaseEnvironment
     public const string PostgresResourceName = "postgres";
 
     /// <summary>Pinned Postgres image tag.</summary>
-    public const string PostgresImageTag = "15.15";
+    public const string PostgresImageTag = EShopDatabaseSetting.PostgresImageTag;
 }

@@ -11,7 +11,7 @@ The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/e
 ## Prerequisites
 
 - .NET 10 SDK. Run from `src/dotnet-es-eshop` so `global.json` applies. It pins `10.0.401` and rolls forward to the latest feature band.
-- A container runtime (Docker or Podman) for SQL Server, Redis, and RabbitMQ.
+- A container runtime (Docker or Podman) for the database, Redis, and RabbitMQ.
 - Aspire 13.6.1. Run from `src/dotnet-es-eshop` so `aspire.config.json` applies. `dotnet run --project AppHost` uses the AppHost SDK pin.
 
 ## Run the AppHost
@@ -23,7 +23,27 @@ cd src/dotnet-es-eshop
 dotnet run --project AppHost
 ```
 
-The AppHost starts SQL Server, Redis, and RabbitMQ, then the services. The Aspire dashboard prints the WebApp URL.
+The AppHost starts one database, Redis, and RabbitMQ, then the services. SQL Server is the default. The Aspire dashboard prints the WebApp URL.
+
+## Database
+
+`EShop:Database` chooses the database. `SqlServer` is the default. `Postgres` is the other value. Any other value stops startup and names those two.
+
+Pick Postgres in any of these ways:
+
+```bash
+dotnet run --project AppHost -- --database postgres
+```
+
+```bash
+EShop__Database=Postgres dotnet run --project AppHost
+```
+
+The AppHost launch profiles `https-postgres` and `http-postgres` set `EShop__Database` to `Postgres`. `--database` sets the same value as `EShop:Database` and wins when both are present.
+
+The AppHost passes that choice to every service as `EShop__Database`. A service started on its own reads the same setting and also defaults to SQL Server.
+
+SQL Server uses the image `mcr.microsoft.com/mssql/server:2025-latest`. Postgres uses the image `postgres:15.15`. Each container keeps its own data volume. Switching from one database to the other does not move data.
 
 ## RabbitMQ management
 
@@ -39,7 +59,7 @@ Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, 
 
 | Project | Role |
 |---|---|
-| `AppHost` | Aspire host for SQL Server, Redis, RabbitMQ, and the services |
+| `AppHost` | Aspire host for the database, Redis, RabbitMQ, and the services |
 | `Identity.API` | Shopper accounts on ASP.NET Identity. Sign-in returns an access token |
 | `Catalog.API` | Catalog items, pictures, and stock |
 | `Basket.API` | Shopper basket. Views are SQL |
@@ -51,7 +71,7 @@ Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, 
 | `Infrastructure` | LawnDart SQL host kit and RabbitMQ transport registration |
 | `Shared` | Events shared across services |
 
-LawnDart product stores in this sample are InMemory (tests) and SQL Server. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps SQL views.
+LawnDart product stores in this sample are InMemory (tests) and the eShop database. That database is SQL Server unless you pick Postgres, as described above. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps its views in the database.
 
 ## Slices
 
@@ -68,6 +88,8 @@ dotnet test src/dotnet-es-eshop/LawnDart.Samples.EShop.sln
 ```
 
 Default unit tests do not need Docker. With `ESHOP_REQUIRE_RABBITMQ=1`, the broker tests connect to RabbitMQ and fail when it is down. `.github/workflows/eshop.yml` starts RabbitMQ for that run.
+
+`tests/Database.Tests` opens SQL Server or Postgres. Set `ESHOP_DATABASE` to `SqlServer` or `Postgres`. Set `ESHOP_REQUIRE_DATABASE=1` to fail when that database cannot start. Without `ESHOP_DATABASE`, those tests skip. The workflow runs them on every pull request, once for each database.
 
 ## Caveats
 

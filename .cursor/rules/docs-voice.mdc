@@ -26,10 +26,11 @@ Lead with what is true and what to do. Do not open a page or section with a
 negation. Contrast only when it adds information.
 
 Sample READMEs state only what the code does. Be honest about stores:
-**InMemory** and **SQL Server** in this repo, plus the Postgres service host
-registration picked with `EShop:Database`. Do not claim Redis,
-Azure Service Bus, or Wolverine. Do not claim a store or transport this sample
-does not run.
+**InMemory** and **SQL Server** in this repo. The eShop AppHost and service hosts,
+including the Identity login store, also run on Postgres. `EShop:Database` chooses
+`SqlServer` (the default) or `Postgres`, and `--database` sets the same value.
+Do not claim Redis, Azure Service Bus, or Wolverine. Do not claim a store or
+transport this sample does not run.
 
 ## Banned voice
 

@@ -6,9 +6,14 @@
 # RabbitMqTransportSmokeTests then connects to the broker. Without that
 # variable, the broker tests return success when port 5672 is closed.
 #
-# SQL Server is not started. Infrastructure tests place a SQL connection
-# string in configuration and assert registrations. They do not open a database.
-# The Aspire AppHost project is compiled with the solution and is not executed.
+# The build-test job does not start a database. Infrastructure tests place a
+# connection string in configuration and assert registrations. They do not open
+# a database. The Aspire AppHost project is compiled with the solution and is
+# not executed.
+#
+# The database-tests job runs tests/Database.Tests once for SQL Server and once
+# for Postgres. Testcontainers starts the database. ESHOP_REQUIRE_DATABASE=1
+# makes a missing database a failure. The job runs on every pull request.
 name: eShop
 
 on:
@@ -80,3 +85,30 @@ jobs:
 
       - name: Test
         run: dotnet test LawnDart.Samples.EShop.sln --no-build
+
+  database-tests:
+    name: Database tests (${{ matrix.database }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [SqlServer, Postgres]
+    defaults:
+      run:
+        working-directory: src/dotnet-es-eshop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: src/dotnet-es-eshop/global.json
+
+      - name: Test databases
+        env:
+          ESHOP_DATABASE: ${{ matrix.database }}
+          ESHOP_REQUIRE_DATABASE: "1"
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: dotnet test tests/Database.Tests/LawnDart.Samples.EShop.Database.Tests.csproj --logger "console;verbosity=normal"
