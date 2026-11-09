@@ -38,6 +38,8 @@ The AppHost passes the choice to every service. A service started on its own rea
 
 Each database container keeps its own data volume. Switching from one database to the other does not move data.
 
+The AppHost runs `--setup-schema` once for each database before the services start. That command creates the tables and exits. `orderingdb` has one setup command, and both Ordering and Order Processor wait for it. A service started on its own takes the same argument. Identity's command also creates the login tables. Startup then checks the tables and stops when they are missing. Startup does not create tables. The setup command does not seed shoppers or catalog items.
+
 ## RabbitMQ management
 
 The AppHost calls `WithManagementPlugin()` on `eventbus`. On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. That page is the RabbitMQ management UI.

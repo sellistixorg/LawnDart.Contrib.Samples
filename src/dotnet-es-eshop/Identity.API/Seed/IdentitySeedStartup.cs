@@ -7,25 +7,34 @@ namespace LawnDart.Samples.EShop.Identity.API.Seed;
 
 /// <summary>
 /// Runs <see cref="IdentitySeeder"/> after the host starts.
-/// Schema initialization in Program.cs finishes before the host runs this service.
+/// The setup command does not start the host, and this service does no work when that command marked the configuration.
 /// </summary>
 public sealed class IdentitySeedStartup : IHostedService
 {
     private readonly IServiceScopeFactory _scopes;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Creates the startup task.
     /// </summary>
     /// <param name="scopes">Scope factory. The seeder and its handlers are scoped.</param>
-    public IdentitySeedStartup(IServiceScopeFactory scopes) => _scopes = scopes;
+    /// <param name="configuration">Host configuration. Setup mode sets <see cref="EShopSchemaSetup.ConfigurationKey"/>.</param>
+    public IdentitySeedStartup(IServiceScopeFactory scopes, IConfiguration configuration)
+    {
+        _scopes = scopes;
+        _configuration = configuration;
+    }
 
     /// <summary>
-    /// Seeds Alice and Bob.
+    /// Seeds Alice and Bob. Setup mode returns without seeding.
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the seed.</param>
     /// <returns>A task that completes when the seed has finished or been skipped.</returns>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (EShopSchemaSetup.IsConfigured(_configuration))
+            return;
+
         await using var scope = _scopes.CreateAsyncScope();
         var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
         await seeder.SeedAsync(cancellationToken).ConfigureAwait(false);

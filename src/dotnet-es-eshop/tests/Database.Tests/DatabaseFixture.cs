@@ -44,7 +44,11 @@ public sealed class DatabaseFixture : IAsyncLifetime
             return;
         }
 
-        _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+        // Same image the AppHost starts. ESHOP_SQLSERVER_IMAGE overrides it for a comparison run.
+        var sqlImage = Environment.GetEnvironmentVariable("ESHOP_SQLSERVER_IMAGE");
+        if (string.IsNullOrWhiteSpace(sqlImage))
+            sqlImage = "mcr.microsoft.com/mssql/server:2025-latest";
+        _sql = new MsSqlBuilder(sqlImage).Build();
         await _sql.StartAsync().ConfigureAwait(false);
         _adminConnectionString = _sql.GetConnectionString();
     }

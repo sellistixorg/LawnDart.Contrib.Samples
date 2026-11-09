@@ -6,6 +6,9 @@ using LawnDart.Samples.EShop.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEShopDatabaseLaunchOption(args);
+var schemaSetup = EShopSchemaSetup.IsRequested(args);
+if (schemaSetup)
+    builder.Configuration.Mark();
 
 builder.AddServiceDefaults();
 
@@ -21,12 +24,21 @@ builder.Services.AddIdentityDemoAuth(builder.Configuration);
 builder.Services.AddLawnDartHttpCommands(identityAssembly);
 builder.AddEShopSlices(identityAssembly);
 builder.Services.AddShopperAccessTokens();
-builder.AddIdentitySeed();
+if (!schemaSetup)
+    builder.AddIdentitySeed();
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSchemaAsync();
-await app.InitializeShopperLoginStoreAsync();
+if (schemaSetup)
+{
+    await app.InitializeEShopLawnDartSchemaAsync();
+    await app.InitializeShopperLoginStoreAsync();
+    await app.DisposeAsync();
+    return;
+}
+
+await app.VerifyEShopLawnDartSchemaAsync();
+await app.VerifyShopperLoginStoreAsync();
 
 app.MapDefaultEndpoints();
 app.MapShopperJwks();

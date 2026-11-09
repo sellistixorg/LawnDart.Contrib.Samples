@@ -16,6 +16,7 @@
     <!-- The same database choice and database names as the services, so the two cannot drift apart. -->
     <Compile Include="..\Infrastructure\EShopDatabase.cs" Link="Shared\EShopDatabase.cs" />
     <Compile Include="..\Infrastructure\EShopDatabases.cs" Link="Shared\EShopDatabases.cs" />
+    <Compile Include="..\Infrastructure\EShopSchemaSetup.cs" Link="Shared\EShopSchemaSetup.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Identity.API\LawnDart.Samples.EShop.Identity.API.csproj" />

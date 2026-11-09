@@ -12,7 +12,7 @@ Hosting design for `src/dotnet-es-eshop`.
 - One database in the AppHost, plus Redis and RabbitMQ. SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`) is the default. Postgres (`postgres:15.15`) is the other choice. Each container keeps its own data volume. Switching does not move data.
 - LawnDart packages pinned to `0.7.0-alpha.4`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.
-- SQL schema init on startup. `InitializeEShopLawnDartSchemaAsync` calls the package `InitializeSchemaAsync`. LawnDart has no versioned migrator. Re-runs are idempotent DDL.
+- Schema setup is a separate command, `--setup-schema`. It calls `InitializeEShopLawnDartSchemaAsync`, which calls the package `InitializeSchemaAsync`. A second run leaves the tables and rows as they are. Normal startup calls `VerifyEShopLawnDartSchemaAsync` and does not create tables. The AppHost runs one setup command per database. Ordering.API and Order Processor share the `orderingdb` command. Identity's command also creates the login tables. The setup command does not seed data.
 - Per-service bounded-context hooks (`AddCatalogContext`, and the rest). The service `Program.cs` calls the hook. An assembly scan runs once there.
 - ServiceDefaults health, OpenTelemetry, discovery, and resilience as the outer host shell.
 

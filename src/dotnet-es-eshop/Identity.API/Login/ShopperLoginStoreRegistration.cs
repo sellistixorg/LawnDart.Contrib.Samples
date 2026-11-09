@@ -66,7 +66,7 @@ public static class ShopperLoginStoreRegistration
     /// <param name="cancellationToken">Token used to cancel schema creation.</param>
     /// <returns>A task that completes when the login schema is ready.</returns>
     /// <remarks>
-    /// LawnDart creates the event log with <c>InitializeSchemaAsync</c>, not a versioned migrator.
+    /// LawnDart creates the event log with <c>InitializeSchemaAsync</c>.
     /// This method calls <c>Database.EnsureCreatedAsync</c> on <c>identitylogindb</c>.
     /// <c>EnsureCreated</c> skips schema creation when the database already has tables, and <c>identitydb</c> already holds the event log.
     /// After that, each missing nullable card column is added to <c>AspNetUsers</c>.
@@ -88,5 +88,28 @@ public static class ShopperLoginStoreRegistration
         {
             await ring.PublishAsync(validation, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Reads the login tables and stops when they are missing.
+    /// Does not create tables or insert a signing key.
+    /// </summary>
+    /// <param name="host">Built Identity host.</param>
+    /// <param name="cancellationToken">Token used to cancel the check.</param>
+    public static async Task VerifyShopperLoginStoreAsync(
+        this IHost host,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        await using var scope = host.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var missing = await ShopperLoginSchemaCheck.FindMissingAsync(db, cancellationToken).ConfigureAwait(false);
+        if (missing.Count == 0)
+            return;
+
+        throw new InvalidOperationException(
+            "The login store schema is not ready: missing " + string.Join(", ", missing) + ". " +
+            "Run this service with " + EShopSchemaSetup.Argument + " before starting it. " +
+            "Startup does not create tables.");
     }
 }

@@ -6,6 +6,9 @@ using LawnDart.Samples.EShop.Shared.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEShopDatabaseLaunchOption(args);
+var schemaSetup = EShopSchemaSetup.IsRequested(args);
+if (schemaSetup)
+    builder.Configuration.Mark();
 
 builder.AddServiceDefaults();
 
@@ -20,11 +23,19 @@ builder.AddEShopLawnDart(
 
 builder.Services.AddLawnDartHttpCommands(catalogAssembly);
 builder.AddEShopSlices(catalogAssembly);
-builder.AddCatalogSeed();
+if (!schemaSetup)
+    builder.AddCatalogSeed();
 
 var app = builder.Build();
 
-await app.InitializeEShopLawnDartSchemaAsync();
+if (schemaSetup)
+{
+    await app.InitializeEShopLawnDartSchemaAsync();
+    await app.DisposeAsync();
+    return;
+}
+
+await app.VerifyEShopLawnDartSchemaAsync();
 
 app.MapDefaultEndpoints();
 app.MapLawnDartCommands();

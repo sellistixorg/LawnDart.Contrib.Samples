@@ -34,7 +34,7 @@ internal static class DatabaseHosts
             database,
             EShopDatabases.Ordering,
             connectionString,
-            context => context.AddOrderProcessorContext(),
+            context => context.AddOrderProcessorContext(typeof(OrderStarted).Assembly),
             enableOutbox: false);
 
     public static IHost Payment(EShopDatabase database, string connectionString) =>
