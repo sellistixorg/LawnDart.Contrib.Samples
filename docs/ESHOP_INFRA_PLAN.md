@@ -2,14 +2,14 @@
 
 Hosting design for `src/dotnet-es-eshop`.
 
-`dotnet run --project AppHost` starts Identity, Catalog, Basket, Ordering, OrderProcessor, PaymentProcessor, Webhooks, WebhookClient, and WebApp. Each API that owns a database registers LawnDart against its Aspire SQL Server database. Cross-service messages travel RabbitMQ through `LawnDart.Messaging.RabbitMQ`, with a SQL outbox and a SQL inbox.
+`dotnet run --project AppHost` starts Identity, Catalog, Basket, Ordering, OrderProcessor, PaymentProcessor, Webhooks, WebhookClient, and WebApp. Each API that owns a database registers LawnDart against its Aspire database. `EShop:Database` chooses SQL Server (the default) or Postgres, and `--database` sets the same value. Cross-service messages travel RabbitMQ through `LawnDart.Messaging.RabbitMQ`, with an outbox and an inbox in that database.
 
 `aspire run` needs an Aspire CLI that matches AppHost 13.6.1. `dotnet run --project AppHost` uses the AppHost SDK pin (`AspireUseCliBundle=true`).
 
 ## What the host runs
 
 - Aspire AppHost and ServiceDefaults (Aspire 13.6.1).
-- SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`), Redis, and RabbitMQ in the AppHost.
+- One database in the AppHost, plus Redis and RabbitMQ. SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`) is the default. Postgres (`postgres:15.15`) is the other choice. Each container keeps its own data volume. Switching does not move data.
 - LawnDart packages pinned to `0.7.0-alpha.4`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.
 - SQL schema init on startup. `InitializeEShopLawnDartSchemaAsync` calls the package `InitializeSchemaAsync`. LawnDart has no versioned migrator. Re-runs are idempotent DDL.
@@ -62,7 +62,7 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 ## Out of scope for the host
 
 - Changing LawnDart product packages beyond the public `0.7.0-alpha.4` APIs.
-- Treating Redis as a LawnDart product store. Postgres is used only through the `EShop:Database` setting on the service hosts. Azure Service Bus is not used here.
+- Treating Redis as a LawnDart product store. Postgres is the database selected with `EShop:Database` or `--database`. Azure Service Bus is not used here.
 
 ## Known gaps
 

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>LawnDart.Samples.EShop.Database.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Basket.API\LawnDart.Samples.EShop.Basket.API.csproj" />
+    <ProjectReference Include="..\..\Catalog.API\LawnDart.Samples.EShop.Catalog.API.csproj" />
+    <ProjectReference Include="..\..\Identity.API\LawnDart.Samples.EShop.Identity.API.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\LawnDart.Samples.EShop.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\OrderProcessor\LawnDart.Samples.EShop.OrderProcessor.csproj" />
+    <ProjectReference Include="..\..\Ordering.API\LawnDart.Samples.EShop.Ordering.API.csproj" />
+    <ProjectReference Include="..\..\PaymentProcessor\LawnDart.Samples.EShop.PaymentProcessor.csproj" />
+    <ProjectReference Include="..\..\Shared\LawnDart.Samples.EShop.Shared.csproj" />
+    <ProjectReference Include="..\..\Webhooks.API\LawnDart.Samples.EShop.Webhooks.API.csproj" />
+  </ItemGroup>
+</Project>

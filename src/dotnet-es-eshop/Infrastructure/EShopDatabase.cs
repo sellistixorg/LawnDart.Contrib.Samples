@@ -37,6 +37,9 @@ public static class EShopDatabaseSetting
     /// <summary>Launch option that sets <see cref="ConfigurationKey"/>.</summary>
     public const string LaunchOption = "--database";
 
+    /// <summary>Postgres image tag the AppHost and the database tests pin.</summary>
+    public const string PostgresImageTag = "15.15";
+
     /// <summary>The database used when nothing is set.</summary>
     public const EShopDatabase Default = EShopDatabase.SqlServer;
 

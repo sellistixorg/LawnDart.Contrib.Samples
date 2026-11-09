@@ -11,7 +11,7 @@ Event-sourced rebuild of [dotnet/eShop](https://github.com/dotnet/eShop) on [Law
 ## Prerequisites
 
 - .NET 10 SDK.
-- A container runtime (Docker or Podman). The AppHost starts SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`), Redis, and RabbitMQ.
+- A container runtime (Docker or Podman). The AppHost starts one database, Redis, and RabbitMQ. SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`) is the default. Postgres (`postgres:15.15`) is the other choice.
 - Aspire 13.6.1. `dotnet run --project AppHost` uses the AppHost SDK pin. `aspire run` needs an Aspire CLI on that same version.
 
 ## Run
@@ -23,6 +23,20 @@ dotnet run --project AppHost
 ```
 
 The Aspire dashboard prints the WebApp URL.
+
+## Database
+
+`EShop:Database` chooses the database. `SqlServer` is the default. `Postgres` is the other value. Any other value stops startup and names those two.
+
+```bash
+dotnet run --project AppHost -- --database postgres
+```
+
+`EShop__Database=Postgres` sets the same choice. The launch profiles `https-postgres` and `http-postgres` set that variable. `--database` wins when both the setting and the launch option are present.
+
+The AppHost passes the choice to every service. A service started on its own reads the same setting and also defaults to SQL Server.
+
+Each database container keeps its own data volume. Switching from one database to the other does not move data.
 
 ## RabbitMQ management
 
@@ -46,7 +60,7 @@ The seed also copies the eShop demo card (masked number, security code 123 for a
 ## Services
 
 ```
-AppHost/              Aspire host: SQL Server, Redis, RabbitMQ, services
+AppHost/              Aspire host: the database, Redis, RabbitMQ, services
 ServiceDefaults/      OpenTelemetry, health, service discovery, resilience
 Infrastructure/       LawnDart SQL host kit and RabbitMQ transport registration
 Shared/               Events shared across services
@@ -63,7 +77,7 @@ tests/                Per-service tests
 .slices/index.json    Slice name to folder map
 ```
 
-LawnDart product stores here are InMemory (tests) and SQL Server. Services that own a SQL database call `AddEShopLawnDart` in `Infrastructure/`. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps SQL views.
+LawnDart product stores here are InMemory (tests) and the eShop database. That database is SQL Server unless you pick Postgres. Services that own a database call `AddEShopLawnDart` in `Infrastructure/`. Hosts with an Aspire `eventbus` reference use `LawnDart.Messaging.RabbitMQ`. The AppHost starts Redis. Basket keeps its views in the database.
 
 ## Slices
 
@@ -81,7 +95,7 @@ From this folder:
 dotnet test
 ```
 
-That runs every project under `tests/`. Default unit tests do not open SQL Server or start the AppHost.
+That runs every project under `tests/`. Default unit tests do not open a database or start the AppHost. `tests/Database.Tests` does open one. Set `ESHOP_DATABASE` to `SqlServer` or `Postgres`. Set `ESHOP_REQUIRE_DATABASE=1` to fail when that database cannot start. Without `ESHOP_DATABASE`, those tests skip.
 
 `ESHOP_REQUIRE_RABBITMQ=1` makes these tests fail when RabbitMQ is down:
 
@@ -92,4 +106,4 @@ That runs every project under `tests/`. Default unit tests do not open SQL Serve
 
 `Outbox_publisher_delivers_to_in_memory_subscribers` stays in memory and runs with the rest.
 
-Pull requests to `main` and pushes to `main` run `.github/workflows/eshop.yml`. The job restores, builds, and tests `LawnDart.Samples.EShop.sln` on `ubuntu-latest`. The SDK comes from `global.json`. Restore uses `nuget.config` in this folder, which lists nuget.org only. The job starts a RabbitMQ container and sets `ESHOP_REQUIRE_RABBITMQ=1`. It does not start SQL Server.
+Pull requests to `main` and pushes to `main` run `.github/workflows/eshop.yml`. One job restores, builds, and tests `LawnDart.Samples.EShop.sln` on `ubuntu-latest`. The SDK comes from `global.json`. Restore uses `nuget.config` in this folder, which lists nuget.org only. That job starts a RabbitMQ container and sets `ESHOP_REQUIRE_RABBITMQ=1`. A second job runs `tests/Database.Tests` for SQL Server and for Postgres.

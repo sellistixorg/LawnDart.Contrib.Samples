@@ -1,6 +1,8 @@
 # Infrastructure
 
-Shared LawnDart host registration for eShop services that own an Aspire SQL database.
+Shared LawnDart host registration for eShop services that own an Aspire database.
+
+`EShop:Database` chooses that database. `SqlServer` is the default. `Postgres` is the other value. `--database` sets the same value. SQL Server uses schema `dbo`. Postgres uses schema `lawndart`.
 
 ## Register
 
