@@ -90,6 +90,32 @@ public class EShopRabbitHostTests
         Assert.Contains(EShopLawnDartHost.EventBusConnectionName, ex.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(EShopDatabase.SqlServer)]
+    [InlineData(EShopDatabase.Postgres)]
+    public void Setup_command_does_not_need_eventbus_connection(EShopDatabase database)
+    {
+        // The AppHost gives the *-schema resources only their database. No eventbus.
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [EShopDatabaseSetting.ConfigurationKey] = database.ToString(),
+            [$"ConnectionStrings:{EShopDatabases.Catalog}"] = database == EShopDatabase.Postgres
+                ? PostgresConnectionString
+                : SqlConnectionString
+        });
+        builder.Configuration.Mark();
+
+        builder.AddEShopLawnDart(
+            EShopDatabases.Catalog,
+            context => context.AddCatalogContext(),
+            EShopServiceNames.Catalog);
+
+        Assert.DoesNotContain(builder.Services, d => d.ServiceType == typeof(RabbitMqMessageTransport));
+        using var provider = builder.Services.BuildServiceProvider();
+        Assert.IsType<InMemoryMessageTransport>(provider.GetRequiredService<IMessageTransport>());
+    }
+
     [Fact]
     public void In_memory_host_does_not_register_rabbit()
     {

@@ -68,6 +68,8 @@ public static class EShopLawnDartHost
     /// RabbitMQ subscription name, for example <see cref="EShopServiceNames.Catalog"/>.
     /// When set, the host uses <c>LawnDart.Messaging.RabbitMQ</c> and the Aspire
     /// <c>eventbus</c> connection. When omitted, the host uses <c>LawnDart.Messaging.InMemory</c>.
+    /// The setup command (<see cref="EShopSchemaSetup.Argument"/>) also uses <c>LawnDart.Messaging.InMemory</c>
+    /// and needs no <c>eventbus</c> connection, because it only creates tables.
     /// </param>
     /// <param name="enableOutbox">
     /// When true, this process polls the outbox table and publishes it.
@@ -383,6 +385,14 @@ public static class EShopLawnDartHost
             throw new ArgumentException(
                 "Subscription name must be 1 to 64 characters of lowercase letters, digits, and hyphens.",
                 nameof(subscriptionClient));
+        }
+
+        // The setup command only creates tables and exits. It sends and receives no messages,
+        // so it does not need RabbitMQ, and the AppHost does not pass it the eventbus connection.
+        if (EShopSchemaSetup.IsConfigured(builder.Configuration))
+        {
+            services.AddInMemoryMessaging();
+            return;
         }
 
         var eventBus = builder.Configuration.GetConnectionString(EventBusConnectionName);
