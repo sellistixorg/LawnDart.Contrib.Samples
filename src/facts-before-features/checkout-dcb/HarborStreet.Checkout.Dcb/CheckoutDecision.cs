@@ -2,21 +2,30 @@ using HarborStreet.Checkout.Dcb.Commands;
 using HarborStreet.Checkout.Dcb.Events;
 using LawnDart;
 using LawnDart.Dcb;
+using LawnDart.EventStore;
 
 namespace HarborStreet.Checkout.Dcb;
 
 /// <summary>
-/// DCB checkout decision over tag <c>title:{titleId}</c>.
+/// DCB checkout decision for one title.
 /// Place Order emits <see cref="OrderPlaced"/> and <see cref="StockReserved"/> in one append.
-/// Concurrent last-copy attempts: exactly one wins via AppendCondition; loser gets no events.
+/// Concurrent last-copy attempts: exactly one wins. The loser gets no events.
 /// </summary>
 /// <remarks>
-/// Events are tagged with the title tag only. The repository appends with FailIfMatches on the
-/// load tags (ConsistencyTags), so concurrent Place Order calls contest the shared scarce unit. Order/customer ids live on the event payloads.
+/// The decision query is one item: the title tag. Each event is stored with that title tag only,
+/// because the title is the event's subject. Order and customer ids live on the event payloads.
+/// The repository guards the append with the same query.
 /// </remarks>
 public class CheckoutDecision : DcbEntity<CheckoutState>
 {
-    public static string[] TitleTags(Guid titleId) => [$"title:{titleId}"];
+    /// <summary>Tag for events about this title.</summary>
+    public static string TitleTag(Guid titleId) => $"title:{titleId}";
+
+    /// <summary>
+    /// Decision query for one title. One item, so the title tag is the whole boundary.
+    /// </summary>
+    public static Query ForTitle(Guid titleId) =>
+        Query.FromItems(QueryItem.ByTags(TitleTag(titleId)));
 
     private Task Handle(AddTitleToCatalogCommand cmd)
     {
@@ -26,14 +35,13 @@ public class CheckoutDecision : DcbEntity<CheckoutState>
         if (string.IsNullOrWhiteSpace(cmd.Name))
             throw new ArgumentException("Title name is required.", nameof(cmd));
 
-        var tags = TitleTags(cmd.TitleId);
         Emit(new TitleAddedToCatalog(
             Guid.NewGuid(),
             DateTime.UtcNow,
             cmd.TitleId,
             cmd.Name.Trim(),
             cmd.Price,
-            cmd.IsScarce), tags);
+            cmd.IsScarce), TitleTag(cmd.TitleId));
 
         return Task.CompletedTask;
     }
@@ -50,7 +58,7 @@ public class CheckoutDecision : DcbEntity<CheckoutState>
             Guid.NewGuid(),
             DateTime.UtcNow,
             cmd.TitleId,
-            cmd.Quantity), TitleTags(cmd.TitleId));
+            cmd.Quantity), TitleTag(cmd.TitleId));
 
         return Task.CompletedTask;
     }
@@ -67,23 +75,22 @@ public class CheckoutDecision : DcbEntity<CheckoutState>
         if (State.AvailableUnits < cmd.Quantity)
             throw new InvalidOperationException("Title unavailable.");
 
-        var tags = TitleTags(cmd.TitleId);
-
         // One decision: both facts or neither (atomic DCB append).
+        // Each event carries the title tag only. That tag is its subject.
         Emit(new OrderPlaced(
             Guid.NewGuid(),
             DateTime.UtcNow,
             cmd.OrderId,
             cmd.CustomerId,
             cmd.TitleId,
-            cmd.Quantity), tags);
+            cmd.Quantity), TitleTag(cmd.TitleId));
 
         Emit(new StockReserved(
             Guid.NewGuid(),
             DateTime.UtcNow,
             cmd.TitleId,
             cmd.OrderId,
-            cmd.Quantity), tags);
+            cmd.Quantity), TitleTag(cmd.TitleId));
 
         return Task.CompletedTask;
 // end snippet place-order

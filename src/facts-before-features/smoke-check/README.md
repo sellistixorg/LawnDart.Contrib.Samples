@@ -4,7 +4,7 @@ A small project that proves the solution restores LawnDart from nuget.org.
 
 ## Objective
 
-Restore and build against LawnDart 0.7.0-alpha.4 from nuget.org.
+Restore and build against LawnDart 0.7.0-alpha.5 from nuget.org.
 
 ## Run
 

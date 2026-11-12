@@ -22,14 +22,14 @@ public sealed class DcbCheckoutService
         decimal price = 52.00m,
         CancellationToken cancellationToken = default)
     {
-        var tags = CheckoutDecision.TitleTags(titleId);
-        var entity = await _dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags, cancellationToken);
+        var query = CheckoutDecision.ForTitle(titleId);
+        var entity = await _dcb.GetOrCreateEntityAsync<CheckoutDecision>(query, cancellationToken);
         await _dcb.HandleCommandAsync(
             entity,
             new AddTitleToCatalogCommand(Guid.NewGuid(), titleId, name, price, IsScarce: true),
             cancellationToken: cancellationToken);
 
-        entity = await _dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags, cancellationToken);
+        entity = await _dcb.GetOrCreateEntityAsync<CheckoutDecision>(query, cancellationToken);
         await _dcb.HandleCommandAsync(
             entity,
             new RestockTitleCommand(Guid.NewGuid(), titleId, Quantity: 1),
@@ -44,9 +44,9 @@ public sealed class DcbCheckoutService
         CheckoutDecision? preloaded = null,
         CancellationToken cancellationToken = default)
     {
-        var tags = CheckoutDecision.TitleTags(titleId);
         var entity = preloaded
-            ?? await _dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags, cancellationToken);
+            ?? await _dcb.GetOrCreateEntityAsync<CheckoutDecision>(
+                CheckoutDecision.ForTitle(titleId), cancellationToken);
 
         try
         {

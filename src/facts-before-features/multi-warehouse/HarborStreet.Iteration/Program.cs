@@ -32,16 +32,16 @@ await checkout.RestockAsync(harborId, titleId, 1);
 var downtownOrder = await checkout.PlaceOrderAsync(
     Guid.NewGuid(), Guid.NewGuid(), downtownId, titleId);
 
-var tags = WarehouseInventoryDecision.BoundaryTags(harborId, titleId);
-var a = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags);
-var b = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags);
+var query = WarehouseInventoryDecision.ForWarehouseTitle(harborId, titleId);
+var a = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(query);
+var b = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(query);
 
 var race = await Task.WhenAll(
     checkout.PlaceOrderAsync(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), Guid.NewGuid(), harborId, titleId, preloaded: a),
     checkout.PlaceOrderAsync(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), Guid.NewGuid(), harborId, titleId, preloaded: b));
 
 var all = (await store.ReadByQueryAsync(Query.All())).Events;
-var harborAfter = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags);
+var harborAfter = await dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(query);
 
 Console.WriteLine("Harbor Street multi-warehouse (model v2)");
 Console.WriteLine($"  Downtown Place Order: {downtownOrder.Status}");

@@ -55,8 +55,8 @@ public sealed class MultiWarehouseCheckout
     public async Task RestockAsync(Guid warehouseId, Guid titleId, int quantity,
         CancellationToken cancellationToken = default)
     {
-        var tags = WarehouseInventoryDecision.BoundaryTags(warehouseId, titleId);
-        var entity = await _dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags, cancellationToken);
+        var query = WarehouseInventoryDecision.ForWarehouseTitle(warehouseId, titleId);
+        var entity = await _dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(query, cancellationToken);
         await _dcb.HandleCommandAsync(
             entity,
             new RestockTitleAtWarehouseCommand(Guid.NewGuid(), warehouseId, titleId, quantity),
@@ -72,9 +72,9 @@ public sealed class MultiWarehouseCheckout
         WarehouseInventoryDecision? preloaded = null,
         CancellationToken cancellationToken = default)
     {
-        var tags = WarehouseInventoryDecision.BoundaryTags(warehouseId, titleId);
         var entity = preloaded
-            ?? await _dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags, cancellationToken);
+            ?? await _dcb.GetOrCreateEntityAsync<WarehouseInventoryDecision>(
+                WarehouseInventoryDecision.ForWarehouseTitle(warehouseId, titleId), cancellationToken);
 
         try
         {

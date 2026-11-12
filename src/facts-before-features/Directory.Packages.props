@@ -4,9 +4,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="LawnDart" Version="0.7.0-alpha.4" />
-    <PackageVersion Include="LawnDart.EventSourcing" Version="0.7.0-alpha.4" />
-    <PackageVersion Include="LawnDart.Testing" Version="0.7.0-alpha.4" />
+    <PackageVersion Include="LawnDart" Version="0.7.0-alpha.5" />
+    <PackageVersion Include="LawnDart.EventSourcing" Version="0.7.0-alpha.5" />
+    <PackageVersion Include="LawnDart.Testing" Version="0.7.0-alpha.5" />
   </ItemGroup>
 
   <ItemGroup>

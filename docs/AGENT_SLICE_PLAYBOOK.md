@@ -27,7 +27,7 @@ Example: `Ordering.API/Slices/MarkOrderStockConfirmed/Order.MarkOrderStockConfir
 
 ## Infrastructure rules (already scaffolded)
 
-- Consume LawnDart NuGet **0.7.0-alpha.4** (see `Directory.Packages.props`). Do not vendor LawnDart source.
+- Consume LawnDart NuGet **0.7.0-alpha.5** (see `Directory.Packages.props`). Do not vendor LawnDart source.
 - Durable store: the eShop database via Aspire. `EShop:Database` chooses SQL Server (the default, `UseSqlServer`) or Postgres (`UsePostgres`). `--database` sets the same value. InMemory is fine for unit GWT tests.
 - Aspire AppHost already provisions that database (SQL Server `mcr.microsoft.com/mssql/server:2025-latest`, or Postgres `postgres:15.15`), Redis, and RabbitMQ and wires `WithReference` like original eShop.
 - The RabbitMQ transport is `LawnDart.Messaging.RabbitMQ`, registered from `AddEShopLawnDart`. Redis `IViewStore` is deferred. Slice work must not invent another transport or view-store adapter.

@@ -24,9 +24,9 @@ var checkout = new DcbCheckoutService(dcb);
 var titleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 await checkout.SeedLastCopyAsync(titleId);
 
-var tags = CheckoutDecision.TitleTags(titleId);
-var observedA = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags);
-var observedB = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags);
+var query = CheckoutDecision.ForTitle(titleId);
+var observedA = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(query);
+var observedB = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(query);
 Console.WriteLine($"Observed available (A/B): {observedA.State.AvailableUnits}/{observedB.State.AvailableUnits}");
 
 var orderA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -42,7 +42,7 @@ var results = await Task.WhenAll(
 var all = (await store.ReadByQueryAsync(Query.All())).Events;
 var placed = all.Count(e => e.Event is OrderPlaced);
 var reserved = all.Count(e => e.Event is StockReserved);
-var decision = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(tags);
+var decision = await dcb.GetOrCreateEntityAsync<CheckoutDecision>(query);
 
 Console.WriteLine("Harbor Street DCB checkout (last-copy race)");
 Console.WriteLine($"  A: {results[0].Status}");

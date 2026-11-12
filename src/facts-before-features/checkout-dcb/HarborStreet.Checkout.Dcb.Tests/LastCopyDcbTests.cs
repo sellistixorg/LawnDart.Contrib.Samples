@@ -34,7 +34,7 @@ public class LastCopyDcbTests
         Assert.Equal(1, events.Count(e => e.Event is StockReserved sr && sr.OrderId == orderId));
 
         var decision = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(
-            CheckoutDecision.TitleTags(titleId));
+            CheckoutDecision.ForTitle(titleId));
         Assert.Equal(0, decision.State.AvailableUnits);
         Assert.Equal(1, decision.State.ReservedUnits);
     }
@@ -75,9 +75,9 @@ public class LastCopyDcbTests
 
         await checkout.SeedLastCopyAsync(titleId);
 
-        var tags = CheckoutDecision.TitleTags(titleId);
-        var entityA = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(tags);
-        var entityB = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(tags);
+        var query = CheckoutDecision.ForTitle(titleId);
+        var entityA = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(query);
+        var entityB = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(query);
         Assert.Equal(1, entityA.State.AvailableUnits);
         Assert.Equal(1, entityB.State.AvailableUnits);
 
@@ -98,7 +98,7 @@ public class LastCopyDcbTests
         Assert.Contains(events, e => e.Event is OrderPlaced op && op.OrderId == winnerOrderId);
         Assert.Contains(events, e => e.Event is StockReserved sr && sr.OrderId == winnerOrderId);
 
-        var decision = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(tags);
+        var decision = await ctx.DcbRepository.GetOrCreateEntityAsync<CheckoutDecision>(query);
         Assert.Equal(0, decision.State.AvailableUnits);
         Assert.Equal(1, decision.State.ReservedUnits);
 // end snippet concurrent-last-copy
@@ -111,14 +111,12 @@ public class LastCopyDcbTests
         var titleId = Guid.NewGuid();
         var orderId = Guid.NewGuid();
         var customerId = Guid.NewGuid();
-        var tags = CheckoutDecision.TitleTags(titleId);
-
         await new DcbCheckoutService(ctx.DcbRepository).SeedLastCopyAsync(titleId);
 
         await DcbSpec
             .For<CheckoutDecision, PlaceOrderCommand>(
                 ctx,
-                tags,
+                CheckoutDecision.ForTitle(titleId),
                 new PlaceOrderCommand(Guid.NewGuid(), orderId, customerId, titleId, 1))
             .ThenEmittedEvent<OrderPlaced>(e => e.OrderId == orderId && e.TitleId == titleId)
             .ThenEmittedEvent<StockReserved>(e => e.OrderId == orderId && e.Quantity == 1)
