@@ -2,15 +2,24 @@ using HarborStreet.EndToEnd.Commands;
 using HarborStreet.EndToEnd.Events;
 using LawnDart;
 using LawnDart.Dcb;
+using LawnDart.EventStore;
 
 namespace HarborStreet.EndToEnd.Domain;
 
 /// <summary>
-/// Place Order and stock reservation as one decision on <c>title:{id}</c>, plus Release Stock after payment failure.
+/// Place Order and stock reservation as one decision for a title, plus Release Stock after payment failure.
+/// The decision query is the title tag. Each event is stored with that tag only.
 /// </summary>
 public class InventoryDecision : DcbEntity<InventoryState>
 {
-    public static string[] TitleTags(Guid titleId) => [$"title:{titleId}"];
+    /// <summary>Tag for events about this title.</summary>
+    public static string TitleTag(Guid titleId) => $"title:{titleId}";
+
+    /// <summary>
+    /// Decision query for one title. One item, so the title tag is the whole boundary.
+    /// </summary>
+    public static Query ForTitle(Guid titleId) =>
+        Query.FromItems(QueryItem.ByTags(TitleTag(titleId)));
 
     private Task Handle(AddTitleToCatalogCommand cmd)
     {
@@ -21,7 +30,7 @@ public class InventoryDecision : DcbEntity<InventoryState>
 
         Emit(new TitleAddedToCatalog(
             Guid.NewGuid(), DateTime.UtcNow, cmd.TitleId, cmd.Name.Trim(), cmd.Price, cmd.IsScarce),
-            TitleTags(cmd.TitleId));
+            TitleTag(cmd.TitleId));
         return Task.CompletedTask;
     }
 
@@ -33,7 +42,7 @@ public class InventoryDecision : DcbEntity<InventoryState>
             throw new ArgumentOutOfRangeException(nameof(cmd), "Restock quantity must be positive.");
 
         Emit(new TitleRestocked(Guid.NewGuid(), DateTime.UtcNow, cmd.TitleId, cmd.Quantity),
-            TitleTags(cmd.TitleId));
+            TitleTag(cmd.TitleId));
         return Task.CompletedTask;
     }
 
@@ -46,11 +55,12 @@ public class InventoryDecision : DcbEntity<InventoryState>
         if (State.AvailableUnits < cmd.Quantity)
             throw new InvalidOperationException("Title unavailable.");
 
-        var tags = TitleTags(cmd.TitleId);
         Emit(new OrderPlaced(
-            Guid.NewGuid(), DateTime.UtcNow, cmd.OrderId, cmd.CustomerId, cmd.TitleId, cmd.Quantity), tags);
+            Guid.NewGuid(), DateTime.UtcNow, cmd.OrderId, cmd.CustomerId, cmd.TitleId, cmd.Quantity),
+            TitleTag(cmd.TitleId));
         Emit(new StockReserved(
-            Guid.NewGuid(), DateTime.UtcNow, cmd.TitleId, cmd.OrderId, cmd.Quantity), tags);
+            Guid.NewGuid(), DateTime.UtcNow, cmd.TitleId, cmd.OrderId, cmd.Quantity),
+            TitleTag(cmd.TitleId));
         return Task.CompletedTask;
     }
 
@@ -65,7 +75,7 @@ public class InventoryDecision : DcbEntity<InventoryState>
 
         Emit(new StockReleased(
             Guid.NewGuid(), DateTime.UtcNow, cmd.TitleId, cmd.OrderId, cmd.Quantity),
-            TitleTags(cmd.TitleId));
+            TitleTag(cmd.TitleId));
         return Task.CompletedTask;
     }
 

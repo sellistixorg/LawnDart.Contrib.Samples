@@ -15,7 +15,7 @@ git clone https://github.com/sellistixorg/LawnDart.Contrib.Samples
 cd LawnDart.Contrib.Samples
 ```
 
-This draft on `main` uses LawnDart `0.7.0-alpha.4`. An edition tag is not published yet.
+This draft on `main` uses LawnDart `0.7.0-alpha.5`. An edition tag is not published yet.
 
 When a tag is published, check it out:
 
@@ -58,4 +58,4 @@ Model notes for v1 and v2 are in `docs/models/facts-before-features/`.
 
 | Edition | Tag | LawnDart version |
 |---|---|---|
-| Draft on main | not yet published | 0.7.0-alpha.4 |
+| Draft on main | not yet published | 0.7.0-alpha.5 |

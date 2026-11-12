@@ -99,9 +99,9 @@ public class EndToEndTests
 
         await bookstore.SeedLastCopyAsync(titleId);
 
-        var tags = InventoryDecision.TitleTags(titleId);
-        var entityA = await ctx.DcbRepository.GetOrCreateEntityAsync<InventoryDecision>(tags);
-        var entityB = await ctx.DcbRepository.GetOrCreateEntityAsync<InventoryDecision>(tags);
+        var query = InventoryDecision.ForTitle(titleId);
+        var entityA = await ctx.DcbRepository.GetOrCreateEntityAsync<InventoryDecision>(query);
+        var entityB = await ctx.DcbRepository.GetOrCreateEntityAsync<InventoryDecision>(query);
         Assert.Equal(1, entityA.State.AvailableUnits);
         Assert.Equal(1, entityB.State.AvailableUnits);
 

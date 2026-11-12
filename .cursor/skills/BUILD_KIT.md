@@ -12,7 +12,7 @@ that matches the package version you consume (for example `0.4`). Product docs
 `build-kit/library-slice.json`, MinVer CI) live in that LawnDart checkout, not
 in this Samples repo.
 
-Targets LawnDart 0.4 (match the package version you reference).
+Targets LawnDart 0.7.0-alpha.5 (match the package version you reference).
 
 ## Generic slice spec
 

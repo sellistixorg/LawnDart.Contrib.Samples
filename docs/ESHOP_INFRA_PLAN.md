@@ -10,7 +10,7 @@ Hosting design for `src/dotnet-es-eshop`.
 
 - Aspire AppHost and ServiceDefaults (Aspire 13.6.1).
 - One database in the AppHost, plus Redis and RabbitMQ. SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`) is the default. Postgres (`postgres:15.15`) is the other choice. Each container keeps its own data volume. Switching does not move data.
-- LawnDart packages pinned to `0.7.0-alpha.4`.
+- LawnDart packages pinned to `0.7.0-alpha.5`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.
 - Schema setup is a separate command, `--setup-schema`. It calls `InitializeEShopLawnDartSchemaAsync`, which calls the package `InitializeSchemaAsync`. A second run leaves the tables and rows as they are. Normal startup calls `VerifyEShopLawnDartSchemaAsync` and does not create tables. The AppHost runs one setup command per database. Ordering.API and Order Processor share the `orderingdb` command. Identity's command also creates the login tables. The setup command does not seed data.
 - Per-service bounded-context hooks (`AddCatalogContext`, and the rest). The service `Program.cs` calls the hook. An assembly scan runs once there.
@@ -61,7 +61,7 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 ## Out of scope for the host
 
-- Changing LawnDart product packages beyond the public `0.7.0-alpha.4` APIs.
+- Changing LawnDart product packages beyond the public `0.7.0-alpha.5` APIs.
 - Treating Redis as a LawnDart product store. Postgres is the database selected with `EShop:Database` or `--database`. Azure Service Bus is not used here.
 
 ## Known gaps
@@ -76,6 +76,6 @@ Model order is Identity, then Catalog, Basket, Ordering, and Payment, plus the O
 
 - Sample root: `src/dotnet-es-eshop/`
 - Event model: `docs/models/eshop/`
-- LawnDart packages: [nuget.org/packages/LawnDart](https://www.nuget.org/packages/LawnDart) at `0.7.0-alpha.4`
+- LawnDart packages: [nuget.org/packages/LawnDart](https://www.nuget.org/packages/LawnDart) at `0.7.0-alpha.5`
 - Upstream shape: [dotnet/eShop](https://github.com/dotnet/eShop)
 - WebApp screen rule: `.cursor/rules/eshop-webapp.mdc`

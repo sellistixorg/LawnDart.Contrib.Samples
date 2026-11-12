@@ -24,9 +24,9 @@ var titleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 await bookstore.SeedLastCopyAsync(titleId);
 
 // --- Last-copy race ---
-var tags = InventoryDecision.TitleTags(titleId);
-var observedA = await dcb.GetOrCreateEntityAsync<InventoryDecision>(tags);
-var observedB = await dcb.GetOrCreateEntityAsync<InventoryDecision>(tags);
+var query = InventoryDecision.ForTitle(titleId);
+var observedA = await dcb.GetOrCreateEntityAsync<InventoryDecision>(query);
+var observedB = await dcb.GetOrCreateEntityAsync<InventoryDecision>(query);
 
 var orderA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 var orderB = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");

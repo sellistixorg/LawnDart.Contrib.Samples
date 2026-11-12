@@ -33,14 +33,14 @@ public sealed class HarborStreetBookstore
         decimal price = 52.00m,
         CancellationToken cancellationToken = default)
     {
-        var tags = InventoryDecision.TitleTags(titleId);
-        var entity = await _dcb.GetOrCreateEntityAsync<InventoryDecision>(tags, cancellationToken);
+        var query = InventoryDecision.ForTitle(titleId);
+        var entity = await _dcb.GetOrCreateEntityAsync<InventoryDecision>(query, cancellationToken);
         await _dcb.HandleCommandAsync(
             entity,
             new AddTitleToCatalogCommand(Guid.NewGuid(), titleId, name, price, IsScarce: true),
             cancellationToken: cancellationToken);
 
-        entity = await _dcb.GetOrCreateEntityAsync<InventoryDecision>(tags, cancellationToken);
+        entity = await _dcb.GetOrCreateEntityAsync<InventoryDecision>(query, cancellationToken);
         await _dcb.HandleCommandAsync(
             entity,
             new RestockTitleCommand(Guid.NewGuid(), titleId, Quantity: 1),
@@ -56,9 +56,9 @@ public sealed class HarborStreetBookstore
         InventoryDecision? preloaded = null,
         CancellationToken cancellationToken = default)
     {
-        var tags = InventoryDecision.TitleTags(titleId);
         var entity = preloaded
-            ?? await _dcb.GetOrCreateEntityAsync<InventoryDecision>(tags, cancellationToken);
+            ?? await _dcb.GetOrCreateEntityAsync<InventoryDecision>(
+                InventoryDecision.ForTitle(titleId), cancellationToken);
 
         try
         {
@@ -92,7 +92,7 @@ public sealed class HarborStreetBookstore
 
     public Task<InventoryDecision> GetInventoryAsync(Guid titleId, CancellationToken cancellationToken = default)
         => _dcb.GetOrCreateEntityAsync<InventoryDecision>(
-            InventoryDecision.TitleTags(titleId), cancellationToken);
+            InventoryDecision.ForTitle(titleId), cancellationToken);
 
     public Task<Order> GetOrderAsync(Guid orderId, CancellationToken cancellationToken = default)
         => _orders.GetOrCreateAsync<Order>(orderId, cancellationToken);

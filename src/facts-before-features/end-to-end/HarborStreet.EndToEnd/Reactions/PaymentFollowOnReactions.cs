@@ -55,8 +55,8 @@ public sealed class PaymentFollowOnReactions
                 Guid.NewGuid(), e.OrderId, "Cancelled after payment failure"),
             cancellationToken: cancellationToken);
 
-        var tags = InventoryDecision.TitleTags(titleId);
-        var inventory = await _dcb.GetOrCreateEntityAsync<InventoryDecision>(tags, cancellationToken);
+        var inventory = await _dcb.GetOrCreateEntityAsync<InventoryDecision>(
+            InventoryDecision.ForTitle(titleId), cancellationToken);
         await _dcb.HandleCommandAsync(
             inventory,
             new ReleaseStockCommand(Guid.NewGuid(), titleId, e.OrderId, quantity),

@@ -34,7 +34,7 @@ public class MultiWarehouseTests
         Assert.Equal(WarehouseCheckoutStatus.RejectedUnavailable, downtownOrder.Status);
 
         var harborInv = await ctx.DcbRepository.GetOrCreateEntityAsync<WarehouseInventoryDecision>(
-            WarehouseInventoryDecision.BoundaryTags(harbor, titleId));
+            WarehouseInventoryDecision.ForWarehouseTitle(harbor, titleId));
         Assert.Equal(1, harborInv.State.AvailableUnits);
     }
 // end snippet downtown-last-copy
@@ -51,9 +51,9 @@ public class MultiWarehouseTests
         await checkout.OpenWarehouseAsync(harbor, "Harbor");
         await checkout.RestockAsync(harbor, titleId, 1);
 
-        var tags = WarehouseInventoryDecision.BoundaryTags(harbor, titleId);
-        var entityA = await ctx.DcbRepository.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags);
-        var entityB = await ctx.DcbRepository.GetOrCreateEntityAsync<WarehouseInventoryDecision>(tags);
+        var query = WarehouseInventoryDecision.ForWarehouseTitle(harbor, titleId);
+        var entityA = await ctx.DcbRepository.GetOrCreateEntityAsync<WarehouseInventoryDecision>(query);
+        var entityB = await ctx.DcbRepository.GetOrCreateEntityAsync<WarehouseInventoryDecision>(query);
         Assert.Equal(1, entityA.State.AvailableUnits);
 
         var results = await Task.WhenAll(
@@ -88,7 +88,7 @@ public class MultiWarehouseTests
 
         // No AvailableUnits on TitleState — compile-time guard via shape; runtime check inventory tag.
         var inv = await ctx.DcbRepository.GetOrCreateEntityAsync<WarehouseInventoryDecision>(
-            WarehouseInventoryDecision.BoundaryTags(harbor, titleId));
+            WarehouseInventoryDecision.ForWarehouseTitle(harbor, titleId));
         Assert.Equal(3, inv.State.AvailableUnits);
     }
 }
