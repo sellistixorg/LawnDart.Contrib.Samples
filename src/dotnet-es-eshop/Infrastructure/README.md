@@ -31,7 +31,13 @@ SQL connection strings come from `ConnectionStrings:{name}`. The Aspire AppHost 
 
 ## What this wires
 
-One bounded context named `default` per process. SQL schema `dbo`.
+One bounded context named `default` per process.
+
+On SQL Server the schema is `dbo`. Events are in `dbo.Events_Readable`. That view joins `dbo.Events` to `dbo.EventTypes`.
+
+On Postgres the schema is `lawndart`. Events are in `lawndart.events`, joined to `lawndart.event_types` on `event_type_id`. The event name column is `token`.
+
+The event log, projection store, and inbox entries below name the SQL Server methods. Postgres uses `UsePostgres`, `AddPostgresProjectionStores`, and `AddPostgresInboxStore` in schema `lawndart`.
 
 - SQL event log (`UseSqlServer`)
 - SQL view store and checkpoints (`AddSqlProjectionStores`)

@@ -16,14 +16,45 @@ The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/e
 
 ## Run the AppHost
 
-From `src/dotnet-es-eshop`:
+From `src/dotnet-es-eshop`, start SQL Server on HTTP (Hypertext Transfer Protocol):
 
 ```bash
 cd src/dotnet-es-eshop
-dotnet run --project AppHost
+dotnet run --project AppHost --launch-profile http
 ```
 
-The AppHost starts one database, Redis, and RabbitMQ, then the services. SQL Server is the default. The Aspire dashboard prints the WebApp URL.
+Start Postgres on HTTP:
+
+```bash
+dotnet run --project AppHost --launch-profile http-postgres
+```
+
+The dashboard is at http://localhost:18848.
+
+`AppHost/Properties/launchSettings.json` defines four profiles.
+
+| Profile | Addresses | Database |
+|---|---|---|
+| `http` | http://localhost:18848 | SQL Server |
+| `http-postgres` | http://localhost:18848 | Postgres |
+| `https` | https://localhost:19888 and http://localhost:18848 | SQL Server |
+| `https-postgres` | https://localhost:19888 and http://localhost:18848 | Postgres |
+
+`http-postgres` and `https-postgres` set `EShop__Database` to `Postgres`.
+
+`http` and `http-postgres` set `ESHOP_USE_HTTP_ENDPOINTS` to `1`. The AppHost then uses the `http` profile on each service that has one. That address is `http://localhost:0`. The dashboard telemetry endpoint (`DOTNET_DASHBOARD_OTLP_ENDPOINT_URL`, OpenTelemetry Protocol) is http://localhost:18075. The resource service endpoint is http://localhost:19075. These profiles stay on HTTP and skip the development certificate.
+
+`https` and `https-postgres` leave `ESHOP_USE_HTTP_ENDPOINTS` unset, so those services use their `https` profile (`https://localhost:0` and `http://localhost:0`). The telemetry endpoint is https://localhost:18076. The resource service endpoint is https://localhost:19076. Those profiles use HTTPS (Hypertext Transfer Protocol Secure). Trust the development certificate before you use them:
+
+```bash
+dotnet dev-certs https --trust
+```
+
+A run with no `--launch-profile` uses `https`, the first profile in the file.
+
+Basket, Catalog, Identity, Ordering, PaymentProcessor, WebApp, WebhookClient, and Webhooks each have those two profiles. OrderProcessor has no launch settings file.
+
+The AppHost starts one database, Redis, and RabbitMQ, then the services.
 
 ## Database
 
@@ -39,6 +70,8 @@ dotnet run --project AppHost -- --database postgres
 EShop__Database=Postgres dotnet run --project AppHost
 ```
 
+With no `--launch-profile`, those commands use the `https` profile. Pass `--launch-profile http` on the first command, or use `http-postgres`, to stay on HTTP.
+
 The AppHost launch profiles `https-postgres` and `http-postgres` set `EShop__Database` to `Postgres`. `--database` sets the same value as `EShop:Database` and wins when both are present.
 
 The AppHost passes that choice to every service as `EShop__Database`. A service started on its own reads the same setting and also defaults to SQL Server.
@@ -53,6 +86,35 @@ dotnet run --project Catalog.API -- --setup-schema
 
 Identity's setup command also creates the login tables. After that, startup checks the tables and stops when they are missing. Startup does not create tables. The setup command does not seed shoppers or catalog items.
 
+## Containers left running
+
+Ctrl+C stops the AppHost process. The SQL Server container (`sql`), the Postgres container (`postgres`), and the RabbitMQ container (`eventbus`) keep running. `AppHost.cs` sets `ContainerLifetime.Persistent` on those three. Only the database you chose is started. Redis uses the session lifetime, so that container stops with the AppHost.
+
+`redis`, `eventbus`, `sql`, and `postgres` each call `WithDataVolume()`. Those volumes remain after the containers stop.
+
+The container name is the resource name, a hyphen, and an 8-character hash of the AppHost path. The label `com.microsoft.developer.usvc-dev.name` holds that name. Persistent containers also carry `com.microsoft.developer.usvc-dev.persistent=true`.
+
+Stop the AppHost, then remove the persistent containers:
+
+```bash
+for id in $(docker ps -aq --filter label=com.microsoft.developer.usvc-dev.persistent=true); do
+  name=$(docker inspect --format '{{index .Config.Labels "com.microsoft.developer.usvc-dev.name"}}' "$id")
+  case "$name" in
+    sql-*|postgres-*|eventbus-*) docker rm -f "$id" ;;
+  esac
+done
+```
+
+A volume name is `lawndart.samples.eshop.apphost-<10-character path hash>-<resource>-data`. The first part is the AppHost assembly name in lowercase. The resource part is `redis`, `eventbus`, `sql`, or `postgres`. Remove the volumes after the containers are gone:
+
+```bash
+docker volume ls -q --filter name=lawndart.samples.eshop.apphost- | while read -r volume; do
+  docker volume rm "$volume"
+done
+```
+
+An empty list removes nothing. Podman takes the same arguments in place of `docker`.
+
 ## RabbitMQ management
 
 On the Aspire dashboard, open the `eventbus` resource and follow the `management` endpoint. Sign in as `guest`. The password is the generated `eventbus-password` parameter on that resource. The same password is in the `eventbus` connection string.
@@ -62,6 +124,8 @@ Dead-lettered messages use the exchange `{subscription}.dlx` and the queue `{sub
 Upgrading an existing broker: delete the old `eshop.*` queues, delete `eshop.integration` if that exchange is a topic, and delete the per-event queues and exchanges. Or wipe the RabbitMQ volume and start again.
 
 Seeded shoppers are `alice` and `bob`. The password is `Pass123$`. Those users, and the masked demo card, come from the eShop seed. Payments are simulated. Checkout still posts that stand-in card.
+
+After checkout the order stays Submitted for the grace period, then moves on. The grace period is 1 minute (`BackgroundTaskOptions:GracePeriodTime` in `OrderProcessor/appsettings.json`). Order Processor checks every 30 seconds (`CheckUpdateTime`). The first check after that minute moves the order on. Waiting about one minute is expected.
 
 ## Services
 
