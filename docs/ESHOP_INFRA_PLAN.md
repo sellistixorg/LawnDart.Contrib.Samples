@@ -4,11 +4,11 @@ Hosting design for `src/dotnet-es-eshop`.
 
 `dotnet run --project AppHost` starts Identity, Catalog, Basket, Ordering, OrderProcessor, PaymentProcessor, Webhooks, WebhookClient, and WebApp. Each API that owns a database registers LawnDart against its Aspire database. `EShop:Database` chooses SQL Server (the default) or Postgres, and `--database` sets the same value. Cross-service messages travel RabbitMQ through `LawnDart.Messaging.RabbitMQ`, with an outbox and an inbox in that database.
 
-`aspire run` needs an Aspire CLI that matches AppHost 13.6.1. `dotnet run --project AppHost` uses the AppHost SDK pin (`AspireUseCliBundle=true`).
+`aspire run` needs an Aspire CLI that matches AppHost 13.6.5. `dotnet run --project AppHost` uses the AppHost SDK pin (`AspireUseCliBundle=true`).
 
 ## What the host runs
 
-- Aspire AppHost and ServiceDefaults (Aspire 13.6.1).
+- Aspire AppHost and ServiceDefaults (Aspire 13.6.5).
 - One database in the AppHost, plus Redis and RabbitMQ. SQL Server (`mcr.microsoft.com/mssql/server:2025-latest`) is the default. Postgres (`postgres:15.15`) is the other choice. Each container keeps its own data volume. Switching does not move data.
 - LawnDart packages pinned to `0.7.0-alpha.5`.
 - One registration helper, `AddEShopLawnDart`, used by Catalog, Basket, Ordering, Identity, OrderProcessor, PaymentProcessor, and Webhooks.

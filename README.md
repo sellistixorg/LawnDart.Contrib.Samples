@@ -12,7 +12,7 @@ The sample under `src/dotnet-es-eshop/` is an event-sourced rebuild of [dotnet/e
 
 - .NET 10 SDK. Run from `src/dotnet-es-eshop` so `global.json` applies. It pins `10.0.401` and rolls forward to the latest feature band.
 - A container runtime (Docker or Podman) for the database, Redis, and RabbitMQ.
-- Aspire 13.6.1. Run from `src/dotnet-es-eshop` so `aspire.config.json` applies. `dotnet run --project AppHost` uses the AppHost SDK pin.
+- Aspire 13.6.5. Run from `src/dotnet-es-eshop` so `aspire.config.json` applies. `dotnet run --project AppHost` uses the AppHost SDK pin.
 
 ## Run the AppHost
 
@@ -42,7 +42,7 @@ The dashboard is at http://localhost:18848.
 
 `http-postgres` and `https-postgres` set `EShop__Database` to `Postgres`.
 
-`http` and `http-postgres` set `ESHOP_USE_HTTP_ENDPOINTS` to `1`. The AppHost then uses the `http` profile on each service that has one. That address is `http://localhost:0`. The dashboard telemetry endpoint (`DOTNET_DASHBOARD_OTLP_ENDPOINT_URL`, OpenTelemetry Protocol) is http://localhost:18075. The resource service endpoint is http://localhost:19075. These profiles stay on HTTP and skip the development certificate.
+`http` and `http-postgres` set `ESHOP_USE_HTTP_ENDPOINTS` to `1`. The AppHost then uses the `http` profile on each service that has one. That address is `http://localhost:0`. The dashboard telemetry endpoint (`DOTNET_DASHBOARD_OTLP_ENDPOINT_URL`, OpenTelemetry Protocol) is http://localhost:18075. The resource service endpoint is http://localhost:19075. These profiles stay on HTTP and skip the development certificate. They also set `ASPIRE_ALLOW_UNSECURED_TRANSPORT` to `true`. Aspire refuses a dashboard address that is plain HTTP unless that variable is true. `aspire run --launch-profile http` and `aspire run --launch-profile http-postgres` use the same profiles.
 
 `https` and `https-postgres` leave `ESHOP_USE_HTTP_ENDPOINTS` unset, so those services use their `https` profile (`https://localhost:0` and `http://localhost:0`). The telemetry endpoint is https://localhost:18076. The resource service endpoint is https://localhost:19076. Those profiles use HTTPS (Hypertext Transfer Protocol Secure). Trust the development certificate before you use them:
 

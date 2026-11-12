@@ -23,6 +23,7 @@
         "DOTNET_ENVIRONMENT": "Development",
         "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:18075",
         "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:19075",
+        "ASPIRE_ALLOW_UNSECURED_TRANSPORT": "true",
         "ESHOP_USE_HTTP_ENDPOINTS": "1"
       }
     },
@@ -49,6 +50,7 @@
         "DOTNET_ENVIRONMENT": "Development",
         "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:18075",
         "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:19075",
+        "ASPIRE_ALLOW_UNSECURED_TRANSPORT": "true",
         "ESHOP_USE_HTTP_ENDPOINTS": "1",
         "EShop__Database": "Postgres"
       }
