@@ -84,6 +84,7 @@ var basketApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Basket_API>("
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(basketDb).WaitFor(basketDb)
     .WaitForCompletion(basketSchema)
+    .WaitFor(identityApi) // checks shopper tokens with Identity's keys
     .WithHttpHealthCheck("/health")
     .WithEnvironment("Identity__Url", identityEndpoint);
 redis.WithParentRelationship(basketApi);
@@ -98,6 +99,7 @@ var orderingApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Ordering_AP
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(orderingDb).WaitFor(orderingDb)
     .WaitForCompletion(orderingSchema)
+    .WaitFor(identityApi) // checks shopper tokens with Identity's keys
     .WithHttpHealthCheck("/health")
     .WithEnvironment("Identity__Url", identityEndpoint);
 
