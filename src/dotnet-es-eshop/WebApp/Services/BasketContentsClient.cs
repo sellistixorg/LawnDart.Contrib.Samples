@@ -152,6 +152,26 @@ public sealed class BasketContentsClient(
     }
 
     /// <summary>
+    /// Waits until the bag is empty, then refreshes listeners.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the wait.</param>
+    /// <remarks>
+    /// A signed-out shopper is treated as an empty bag. The wait uses the same
+    /// retry window as add and quantity changes.
+    /// </remarks>
+    public async Task WaitUntilEmptyAsync(CancellationToken cancellationToken = default)
+    {
+        if (!TryBuyerId(out var buyerId))
+        {
+            await NotifyAsync().ConfigureAwait(false);
+            return;
+        }
+
+        await WaitUntilAsync(buyerId, items => items.Count == 0, cancellationToken).ConfigureAwait(false);
+        await NotifyAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Runs <paramref name="callback"/> after a bag write on this shopper's client.
     /// </summary>
     /// <param name="callback">
