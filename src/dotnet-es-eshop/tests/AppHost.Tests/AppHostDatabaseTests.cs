@@ -113,6 +113,26 @@ public class AppHostDatabaseTests
         Assert.Equal(EShopDatabaseEnvironment.PostgresImageTag, image.Tag);
     }
 
+    [Theory]
+    [InlineData("https")]
+    [InlineData("https-postgres")]
+    public async Task Https_profiles_give_every_service_the_https_endpoint_the_wiring_reads(string appHostProfile)
+    {
+        // ESHOP_USE_HTTP_ENDPOINTS is unset here, so the AppHost wires the services' https endpoints.
+        await using var builder = await CreateAsync(["DOTNET_LAUNCH_PROFILE=" + appHostProfile]);
+
+        foreach (var project in builder.Resources.OfType<ProjectResource>())
+        {
+            if (project.Name.EndsWith("-schema", StringComparison.Ordinal) || project.Name == "order-processor")
+                continue;
+
+            var endpoints = project.Annotations.OfType<EndpointAnnotation>().Select(e => e.Name).ToArray();
+            Assert.True(
+                endpoints.Contains("https", StringComparer.Ordinal),
+                project.Name + " has only " + string.Join(", ", endpoints) + " under " + appHostProfile + ".");
+        }
+    }
+
     private static Task<IDistributedApplicationTestingBuilder> CreateAsync(string[] args) =>
         DistributedApplicationTestingBuilder.CreateAsync<Projects.LawnDart_Samples_EShop_AppHost>(
             args,

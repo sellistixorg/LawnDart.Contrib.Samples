@@ -40,6 +40,10 @@ var orderingDb = addDatabase(EShopDatabases.Ordering);
 var paymentDb = addDatabase(EShopDatabases.Payment);
 var webhooksDb = addDatabase(EShopDatabases.Webhooks);
 
+// Each service project with endpoints is pinned to this launch profile by name.
+// Without the name, Aspire picks a service profile that matches the AppHost profile, or else the first one.
+// No service has an https-postgres profile, so that AppHost profile used to give every service only
+// its http endpoint, and GetEndpoint("https") below failed.
 var launchProfileName = ShouldUseHttpForEndpoints() ? "http" : "https";
 
 // One setup command per database. It creates tables and exits.
@@ -66,7 +70,7 @@ var webhooksSchema = AddSchemaSetup(
     webhooksDb);
 
 // Service projects. Each API hosts its slices under Slices/.
-var identityApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Identity_API>("identity-api")
+var identityApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Identity_API>("identity-api", launchProfileName)
     .WithExternalHttpEndpoints()
     .WithReference(identityDb).WaitFor(identityDb)
     .WithReference(identityLoginDb).WaitFor(identityLoginDb)
@@ -75,7 +79,7 @@ var identityApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Identity_AP
 
 var identityEndpoint = identityApi.GetEndpoint(launchProfileName);
 
-var basketApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Basket_API>("basket-api")
+var basketApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Basket_API>("basket-api", launchProfileName)
     .WithReference(redis) // Redis IViewStore is deferred. Basket keeps its views in the database.
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(basketDb).WaitFor(basketDb)
@@ -84,13 +88,13 @@ var basketApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Basket_API>("
     .WithEnvironment("Identity__Url", identityEndpoint);
 redis.WithParentRelationship(basketApi);
 
-var catalogApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Catalog_API>("catalog-api")
+var catalogApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Catalog_API>("catalog-api", launchProfileName)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(catalogDb).WaitFor(catalogDb)
     .WaitForCompletion(catalogSchema)
     .WithHttpHealthCheck("/health");
 
-var orderingApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Ordering_API>("ordering-api")
+var orderingApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Ordering_API>("ordering-api", launchProfileName)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(orderingDb).WaitFor(orderingDb)
     .WaitForCompletion(orderingSchema)
@@ -103,13 +107,13 @@ builder.AddProject<Projects.LawnDart_Samples_EShop_OrderProcessor>("order-proces
     .WaitForCompletion(orderingSchema)
     .WaitFor(orderingApi);
 
-builder.AddProject<Projects.LawnDart_Samples_EShop_PaymentProcessor>("payment-processor")
+builder.AddProject<Projects.LawnDart_Samples_EShop_PaymentProcessor>("payment-processor", launchProfileName)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(paymentDb).WaitFor(paymentDb)
     .WaitForCompletion(paymentSchema)
     .WithHttpHealthCheck("/health");
 
-var webHooksApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Webhooks_API>("webhooks-api")
+var webHooksApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Webhooks_API>("webhooks-api", launchProfileName)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithReference(webhooksDb).WaitFor(webhooksDb)
     .WaitForCompletion(webhooksSchema)
@@ -119,11 +123,11 @@ var webHooksApi = builder.AddProject<Projects.LawnDart_Samples_EShop_Webhooks_AP
 // Optional: Yarp mobile-bff can be added later to match upstream eShop mobile routes.
 // builder.AddYarp("mobile-bff")...
 
-var webhooksClient = builder.AddProject<Projects.LawnDart_Samples_EShop_WebhookClient>("webhooksclient")
+var webhooksClient = builder.AddProject<Projects.LawnDart_Samples_EShop_WebhookClient>("webhooksclient", launchProfileName)
     .WithReference(webHooksApi)
     .WithEnvironment("IdentityUrl", identityEndpoint);
 
-var webApp = builder.AddProject<Projects.LawnDart_Samples_EShop_WebApp>("webapp")
+var webApp = builder.AddProject<Projects.LawnDart_Samples_EShop_WebApp>("webapp", launchProfileName)
     .WithExternalHttpEndpoints()
     .WithReference(basketApi)
     .WithReference(catalogApi)
