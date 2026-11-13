@@ -1,6 +1,10 @@
 using LawnDart.Samples.EShop.Identity.API.Login;
 using LawnDart.Samples.EShop.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Npgsql;
 
 namespace LawnDart.Samples.EShop.Database.Tests;
@@ -28,6 +32,27 @@ public sealed class IdentityLoginDatabaseTests
 
         Assert.Equal(first, second);
         Assert.Equal(1, await CountSigningKeysAsync(connectionString));
+    }
+
+    [DatabaseFact]
+    public async Task Service_host_accepts_its_own_tokens_after_setup_ran_in_another_process()
+    {
+        var connectionString = await _database.CreateDatabaseAsync("identity_login_keys");
+        using (var setup = DatabaseHosts.IdentityLogin(_database.Database, connectionString))
+            await setup.InitializeShopperLoginStoreAsync();
+
+        // The service host is a new process in the AppHost. It only verifies the schema.
+        using var service = DatabaseHosts.IdentityLogin(_database.Database, connectionString);
+        await service.VerifyShopperLoginStoreAsync();
+
+        var token = await service.Services.GetRequiredService<IShopperAccessTokenIssuer>()
+            .IssueAsync(Guid.NewGuid(), "alice");
+        var parameters = service.Services.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+            .Get(ShopperAccessTokens.AuthenticationScheme)
+            .TokenValidationParameters;
+        var result = await new JsonWebTokenHandler().ValidateTokenAsync(token.Value, parameters);
+
+        Assert.True(result.IsValid, result.Exception?.Message);
     }
 
     private void AssertCardColumns(string snapshot)

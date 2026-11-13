@@ -83,17 +83,20 @@ public static class ShopperLoginStoreRegistration
         await db.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
         await ShopperLoginCardColumns.AddMissingAsync(db, cancellationToken).ConfigureAwait(false);
         await ShopperSigningKeySchema.AddMissingAsync(db, cancellationToken).ConfigureAwait(false);
-        if (host.Services.GetService<ShopperSigningKeyRing>() is ShopperSigningKeyRing ring
-            && host.Services.GetService<ShopperValidationKeys>() is ShopperValidationKeys validation)
-        {
-            await ring.PublishAsync(validation, cancellationToken).ConfigureAwait(false);
-        }
+        await PublishValidationKeysAsync(host, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Reads the login tables and stops when they are missing.
-    /// Does not create tables or insert a signing key.
+    /// Then loads the stored signing keys into <see cref="ShopperValidationKeys"/>.
+    /// Does not create tables.
     /// </summary>
+    /// <remarks>
+    /// The setup command (<c>--setup-schema</c>) runs in its own process, so the keys it publishes
+    /// are gone when the service starts. Without this load, Identity rejects its own access tokens
+    /// on bearer routes such as the shopper account profile. The setup command inserts the key row,
+    /// so this load normally only reads it.
+    /// </remarks>
     /// <param name="host">Built Identity host.</param>
     /// <param name="cancellationToken">Token used to cancel the check.</param>
     public static async Task VerifyShopperLoginStoreAsync(
@@ -105,11 +108,23 @@ public static class ShopperLoginStoreRegistration
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var missing = await ShopperLoginSchemaCheck.FindMissingAsync(db, cancellationToken).ConfigureAwait(false);
         if (missing.Count == 0)
+        {
+            await PublishValidationKeysAsync(host, cancellationToken).ConfigureAwait(false);
             return;
+        }
 
         throw new InvalidOperationException(
             "The login store schema is not ready: missing " + string.Join(", ", missing) + ". " +
             "Run this service with " + EShopSchemaSetup.Argument + " before starting it. " +
             "Startup does not create tables.");
+    }
+
+    private static async Task PublishValidationKeysAsync(IHost host, CancellationToken cancellationToken)
+    {
+        if (host.Services.GetService<ShopperSigningKeyRing>() is ShopperSigningKeyRing ring
+            && host.Services.GetService<ShopperValidationKeys>() is ShopperValidationKeys validation)
+        {
+            await ring.PublishAsync(validation, cancellationToken).ConfigureAwait(false);
+        }
     }
 }
