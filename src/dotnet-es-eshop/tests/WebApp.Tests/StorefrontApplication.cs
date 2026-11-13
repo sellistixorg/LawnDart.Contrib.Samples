@@ -25,10 +25,13 @@ public sealed class StorefrontApplication : WebApplicationFactory<Program>
 
     public List<string?> OrderingAuthorization { get; } = [];
 
+    public OrderingApiStub Ordering { get; }
+
     public StorefrontApplication()
     {
         Basket = new BasketApiStub(BasketAuthorization);
         Catalog = new CatalogApiStub(CatalogAuthorization);
+        Ordering = new OrderingApiStub(OrderingAuthorization) { Basket = Basket };
     }
 
     public CollectingLoggerProvider Logs { get; } = new();
@@ -52,7 +55,7 @@ public sealed class StorefrontApplication : WebApplicationFactory<Program>
             services.AddHttpClient(EShopStorefrontClients.Catalog)
                 .ConfigurePrimaryHttpMessageHandler(() => Catalog);
             services.AddHttpClient(EShopStorefrontClients.Ordering)
-                .ConfigurePrimaryHttpMessageHandler(() => new StaticJsonHandler(EmptyOrders, OrderingAuthorization));
+                .ConfigurePrimaryHttpMessageHandler(() => Ordering);
         });
     }
 
@@ -64,8 +67,6 @@ public sealed class StorefrontApplication : WebApplicationFactory<Program>
             BaseAddress = new Uri("https://localhost")
         });
 
-    private const string EmptyOrders =
-        """{"buyerId":"00000000-0000-0000-0000-000000000000","orders":[]}""";
 }
 
 public sealed class IdentityStub : HttpMessageHandler
@@ -133,6 +134,25 @@ public sealed class IdentityStub : HttpMessageHandler
             using var document = JsonDocument.Parse(json);
             SignedOutAccount = document.RootElement.GetProperty("accountId").GetGuid();
             return new HttpResponseMessage(HttpStatusCode.Accepted);
+        }
+
+        if (request.Method == HttpMethod.Get
+            && path.Equals("/views/shopper-account-profile", StringComparison.OrdinalIgnoreCase))
+        {
+            return Json(HttpStatusCode.OK, new
+            {
+                accountId = AliceId,
+                userName = UserName,
+                email = "alice@example.com",
+                name = "Alice",
+                lastName = "Smith",
+                street = "123 Main",
+                city = "Seattle",
+                state = "WA",
+                country = "USA",
+                zipCode = "98101",
+                isActive = true
+            });
         }
 
         return new HttpResponseMessage(HttpStatusCode.NotFound);
@@ -356,7 +376,10 @@ public sealed class BasketApiStub : HttpMessageHandler
     }
 
     private static HttpResponseMessage Json(object body) =>
-        new(HttpStatusCode.OK)
+        Json(HttpStatusCode.OK, body);
+
+    private static HttpResponseMessage Json(HttpStatusCode status, object body) =>
+        new(status)
         {
             Content = JsonContent.Create(body)
         };
@@ -434,24 +457,135 @@ public sealed class CatalogApiStub : HttpMessageHandler
     }
 }
 
-public sealed class StaticJsonHandler(string json, List<string?> authorizationHeaders) : HttpMessageHandler
+public sealed class OrderingApiStub : HttpMessageHandler
 {
-    protected override Task<HttpResponseMessage> SendAsync(
+    private readonly object _gate = new();
+    private readonly List<object> _orders = [];
+    private readonly List<string?> _authorization;
+
+    public OrderingApiStub(List<string?> authorization)
+    {
+        ArgumentNullException.ThrowIfNull(authorization);
+        _authorization = authorization;
+    }
+
+    public BasketApiStub? Basket { get; set; }
+
+    public TimeSpan ClearBasketDelay { get; set; } = TimeSpan.Zero;
+
+    public HttpStatusCode PlaceOrderStatus { get; set; } = HttpStatusCode.Accepted;
+
+    public string? RejectionTitle { get; set; }
+
+    public int PlaceOrderCount { get; private set; }
+
+    public void Reset()
+    {
+        lock (_gate)
+            _orders.Clear();
+        ClearBasketDelay = TimeSpan.Zero;
+        PlaceOrderStatus = HttpStatusCode.Accepted;
+        RejectionTitle = null;
+        PlaceOrderCount = 0;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        lock (authorizationHeaders)
-            authorizationHeaders.Add(request.Headers.Authorization?.ToString());
-        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        await Task.Yield();
+        lock (_authorization)
+            _authorization.Add(request.Headers.Authorization?.ToString());
+
+        var path = request.RequestUri?.AbsolutePath ?? "";
+        if (request.Method == HttpMethod.Get
+            && path.Equals("/views/orders-by-shopper", StringComparison.OrdinalIgnoreCase))
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-        return Task.FromResult(response);
+            object[] orders;
+            lock (_gate)
+                orders = [.. _orders];
+            return Json(new { BuyerId = IdentityStub.AliceId, Orders = orders });
+        }
+
+        if (request.Method == HttpMethod.Post
+            && path.Equals("/api/ordering/place-order", StringComparison.OrdinalIgnoreCase))
+        {
+            var json = request.Content is null
+                ? ""
+                : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
+            var root = document.RootElement;
+            var orderId = root.TryGetProperty("orderId", out var idValue) && idValue.ValueKind == JsonValueKind.String
+                ? idValue.GetGuid()
+                : Guid.NewGuid();
+            var total = 0m;
+            if (root.TryGetProperty("orderItems", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    var price = item.TryGetProperty("unitPrice", out var priceValue) ? priceValue.GetDecimal() : 0m;
+                    var units = item.TryGetProperty("units", out var unitsValue) ? unitsValue.GetInt32() : 0;
+                    total += price * units;
+                }
+            }
+
+            var row = new
+            {
+                Id = orderId,
+                Date = DateTime.UtcNow,
+                Status = "Submitted",
+                Total = total
+            };
+            PlaceOrderCount++;
+            if (PlaceOrderStatus == HttpStatusCode.UnprocessableEntity)
+            {
+                return Json(
+                    HttpStatusCode.UnprocessableEntity,
+                    new { title = RejectionTitle ?? "ORDER_REJECTED" });
+            }
+
+            lock (_gate)
+                _orders.Add(row);
+
+            ScheduleBasketClear();
+            return new HttpResponseMessage(PlaceOrderStatus);
+        }
+
+        return new HttpResponseMessage(HttpStatusCode.NotFound);
     }
 
     protected override void Dispose(bool disposing)
     {
     }
+
+    private void ScheduleBasketClear()
+    {
+        var basket = Basket;
+        if (basket is null)
+            return;
+
+        var delay = ClearBasketDelay;
+        if (delay <= TimeSpan.Zero)
+        {
+            basket.Reset();
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(delay);
+            basket.Reset();
+        });
+    }
+
+    private static HttpResponseMessage Json(object body) =>
+        Json(HttpStatusCode.OK, body);
+
+    private static HttpResponseMessage Json(HttpStatusCode status, object body) =>
+        new(status)
+        {
+            Content = JsonContent.Create(body)
+        };
 }
 
 public sealed class CollectingLoggerProvider : ILoggerProvider
