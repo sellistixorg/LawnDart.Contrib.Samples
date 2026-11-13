@@ -201,6 +201,17 @@ public class AppHostDatabaseTests
                     && wait.Resource.Name == schema
                     && wait.WaitType == WaitType.WaitForCompletion);
         }
+
+        // Basket and Ordering fetch Identity's signing keys at startup.
+        foreach (var service in new[] { "basket-api", "ordering-api" })
+        {
+            var project = Assert.Single(builder.Resources.OfType<ProjectResource>(), resource => resource.Name == service);
+            Assert.Contains(
+                project.Annotations,
+                annotation => annotation is WaitAnnotation wait
+                    && wait.Resource.Name == "identity-api"
+                    && wait.WaitType == WaitType.WaitUntilHealthy);
+        }
     }
 
     private static async Task<Dictionary<string, string>> EnvironmentAsync(ProjectResource project)

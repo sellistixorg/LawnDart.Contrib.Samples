@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace LawnDart.Samples.EShop.Infrastructure;
@@ -53,9 +55,9 @@ public static class ShopperBearerAccessExtensions
     /// <returns>The same service collection.</returns>
     /// <remarks>
     /// A missing or relative URL still lets the host start. Tokens then fail validation.
-    /// Key loading runs in <c>OnMessageReceived</c>. The signing-key resolver only reads the cache.
-    /// Any fetch waits <see cref="ShopperAccessTokens.JwksRefreshInterval"/> before another try.
-    /// A failed fetch also waits <see cref="ShopperAccessTokens.JwksFailureCooldown"/>.
+    /// The keys are fetched in the background when the host starts. A request without a bearer token never fetches.
+    /// A token with an unknown key id waits for a fetch. The signing-key resolver only reads the cache.
+    /// See <see cref="ShopperJwksCache"/> for the refresh rules.
     /// </remarks>
     public static IServiceCollection AddShopperBearerAccess(
         this IServiceCollection services,
@@ -64,15 +66,21 @@ public static class ShopperBearerAccessExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         services.AddSingleton<ShopperJwksCache>();
+        services.AddHostedService<ShopperJwksWarmup>();
         AddScheme(services);
         services.AddOptions<JwtBearerOptions>(ShopperAccessTokens.AuthenticationScheme)
             .Configure<ShopperJwksCache>((options, cache) =>
             {
                 options.Events = new JwtBearerEvents
                 {
-                    OnMessageReceived = context => cache.EnsureAsync(
-                        ShopperTokenKid.Read(ShopperTokenKid.FromContext(context)),
-                        context.HttpContext.RequestAborted)
+                    OnMessageReceived = context =>
+                    {
+                        // Health probes and open routes carry no token. They must not fetch keys.
+                        var token = ShopperTokenKid.FromContext(context);
+                        return string.IsNullOrEmpty(token)
+                            ? Task.CompletedTask
+                            : cache.EnsureAsync(ShopperTokenKid.Read(token), context.HttpContext.RequestAborted);
+                    }
                 };
                 options.TokenValidationParameters.IssuerSigningKeyResolver = (_, _, kid, _) => cache.Resolve(kid);
             });
@@ -328,52 +336,89 @@ internal sealed class ShopperIdRead
 }
 
 /// <summary>
-/// Cached public keys from Identity. A fetch, successful or not, blocks another fetch until the refresh interval has passed.
+/// Public keys from Identity's JWKS document.
 /// </summary>
+/// <remarks>
+/// One refresh runs at a time and every caller shares it. A refresh tries <see cref="ShopperAccessTokens.JwksFetchAttempts"/>
+/// times, each attempt waiting up to <see cref="ShopperAccessTokens.JwksFetchTimeout"/>. A failed refresh keeps the last good keys.
+/// With no keys yet, every token waits for a refresh, so one failure does not lock shoppers out.
+/// A known key older than <see cref="ShopperAccessTokens.JwksRefreshInterval"/> is refreshed in the background.
+/// An unknown key id waits for a refresh, at most once per <see cref="ShopperAccessTokens.JwksUnknownKeyCooldown"/>.
+/// </remarks>
 internal sealed class ShopperJwksCache
 {
-    private readonly HttpClient _http = new() { Timeout = ShopperAccessTokens.JwksFetchTimeout };
-    private readonly string? _address;
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private IReadOnlyList<SecurityKey> _keys = [];
-    private long _fetchedAtTicks;
-    private long _backoffUntilTicks;
+    private readonly HttpClient _http;
+    private readonly Uri? _address;
+    private readonly ILogger _logger;
+    private readonly Lock _sync = new();
+    private Task<bool>? _refresh;
+    private volatile IReadOnlyList<SecurityKey> _keys = [];
+    private long _lastAttemptEnded;
 
     /// <summary>
     /// Creates the cache from <c>Identity:Url</c>.
     /// </summary>
     /// <param name="configuration">Host configuration.</param>
-    public ShopperJwksCache(IConfiguration configuration)
+    /// <param name="logger">Logs failed refreshes. Key material is not logged.</param>
+    public ShopperJwksCache(IConfiguration configuration, ILogger<ShopperJwksCache> logger)
+        : this(ReadAddress(configuration), new HttpClient(), logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-        var url = configuration[$"{EShopIdentityClientOptions.SectionName}:Url"];
-        if (!string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var identity))
-            _address = new Uri(identity, ShopperAccessTokens.JwksPath).AbsoluteUri;
     }
 
     /// <summary>
-    /// Fetches keys when the refresh interval has elapsed. An unknown key id does not start its own fetch.
+    /// Creates the cache for one JWKS address.
     /// </summary>
-    /// <param name="kid">Key id from the token. It does not bypass the interval.</param>
-    /// <param name="cancellationToken">Token used to cancel the wait.</param>
-    /// <returns>A task that completes when the cache is current for this interval.</returns>
+    /// <param name="address">Absolute JWKS URL, or null when Identity is not configured.</param>
+    /// <param name="http">Client used for the fetch. Its own timeout is turned off. Each attempt has its own.</param>
+    /// <param name="logger">Logs failed refreshes.</param>
+    internal ShopperJwksCache(Uri? address, HttpClient http, ILogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(http);
+        ArgumentNullException.ThrowIfNull(logger);
+        _address = address;
+        _http = http;
+        _http.Timeout = Timeout.InfiniteTimeSpan;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Starts a background refresh. The host calls this at startup.
+    /// </summary>
+    public void Warm()
+    {
+        if (_address is not null)
+            _ = RefreshAsync();
+    }
+
+    /// <summary>
+    /// Makes sure the cache can check a token signed with <paramref name="kid"/>.
+    /// </summary>
+    /// <param name="kid">Key id from the token header.</param>
+    /// <param name="cancellationToken">Stops this caller's wait. The shared refresh keeps running.</param>
+    /// <returns>A task that completes when the keys are usable, or when the refresh has given up.</returns>
     public async Task EnsureAsync(string? kid, CancellationToken cancellationToken)
     {
-        _ = kid;
-        if (_address is null || !RefreshDue())
+        if (_address is null)
             return;
 
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var keys = _keys;
+        if (keys.Count > 0 && Matches(keys, kid).Any())
+        {
+            if (SinceLastAttempt() >= ShopperAccessTokens.JwksRefreshInterval)
+                _ = RefreshAsync();
+            return;
+        }
+
+        if (keys.Count > 0 && SinceLastAttempt() < ShopperAccessTokens.JwksUnknownKeyCooldown)
+            return;
+
         try
         {
-            if (!RefreshDue())
-                return;
-
-            await RefreshAsync(cancellationToken).ConfigureAwait(false);
+            await RefreshAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
         }
-        finally
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _gate.Release();
+            // The caller went away. The token fails with the keys we have.
         }
     }
 
@@ -382,60 +427,100 @@ internal sealed class ShopperJwksCache
     /// </summary>
     /// <param name="kid">Key id from the token. An empty id returns every cached key.</param>
     /// <returns>The matching keys. An unknown id returns none.</returns>
-    public IEnumerable<SecurityKey> Resolve(string? kid)
-    {
-        if (string.IsNullOrEmpty(kid))
-            return _keys;
+    public IEnumerable<SecurityKey> Resolve(string? kid) => Matches(_keys, kid);
 
-        return _keys.Where(key => string.Equals(key.KeyId, kid, StringComparison.Ordinal));
+    /// <summary>
+    /// Starts a refresh, or joins the one already running.
+    /// </summary>
+    /// <returns>True when new keys were loaded. False when every attempt failed and the old keys were kept.</returns>
+    internal Task<bool> RefreshAsync()
+    {
+        lock (_sync)
+        {
+            // Task.Run keeps the fetch off the caller's stack, so _refresh is set before the fetch can clear it.
+            return _refresh ??= Task.Run(FetchAsync);
+        }
     }
 
-    private bool RefreshDue()
+    private async Task<bool> FetchAsync()
     {
-        var now = DateTimeOffset.UtcNow.UtcTicks;
-        var backoff = Volatile.Read(ref _backoffUntilTicks);
-        if (backoff != 0 && now < backoff)
-            return false;
-
-        var fetched = Volatile.Read(ref _fetchedAtTicks);
-        var interval = ShopperAccessTokens.JwksRefreshInterval.Ticks;
-        return fetched == 0 || now - fetched >= interval;
-    }
-
-    private async Task RefreshAsync(CancellationToken cancellationToken)
-    {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(ShopperAccessTokens.JwksFetchTimeout);
         try
         {
-            using var response = await _http.GetAsync(_address, timeout.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            for (var attempt = 1; ; attempt++)
             {
-                BackOff();
-                return;
+                try
+                {
+                    using var timeout = new CancellationTokenSource(ShopperAccessTokens.JwksFetchTimeout);
+                    using var response = await _http.GetAsync(_address, timeout.Token).ConfigureAwait(false);
+                    response.EnsureSuccessStatusCode();
+                    var json = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
+                    var keys = new JsonWebKeySet(json).GetSigningKeys().ToList();
+                    if (keys.Count == 0)
+                        throw new InvalidDataException("The JWKS document has no signing keys.");
+
+                    _keys = keys;
+                    return true;
+                }
+                catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidDataException or ArgumentException or JsonException)
+                {
+                    if (attempt >= ShopperAccessTokens.JwksFetchAttempts)
+                    {
+                        _logger.LogWarning(
+                            "Could not fetch shopper signing keys from {Address} after {Attempts} attempts. {Kept} cached key(s) stay in use. {Error}",
+                            _address, attempt, _keys.Count, ex.Message);
+                        return false;
+                    }
+
+                    _logger.LogDebug("Shopper signing key fetch attempt {Attempt} failed. {Error}", attempt, ex.Message);
+                    await Task.Delay(ShopperAccessTokens.JwksRetryDelay * attempt).ConfigureAwait(false);
+                }
             }
-
-            var json = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
-            var set = new JsonWebKeySet(json);
-            _keys = set.GetSigningKeys().ToList();
-            Volatile.Write(ref _fetchedAtTicks, DateTimeOffset.UtcNow.UtcTicks);
-            Volatile.Write(ref _backoffUntilTicks, 0);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or ArgumentException)
+        finally
         {
-            if (cancellationToken.IsCancellationRequested)
-                throw;
-
-            BackOff();
+            lock (_sync)
+            {
+                Volatile.Write(ref _lastAttemptEnded, Environment.TickCount64);
+                _refresh = null;
+            }
         }
     }
 
-    private void BackOff()
+    private TimeSpan SinceLastAttempt()
     {
-        var now = DateTimeOffset.UtcNow;
-        Volatile.Write(ref _fetchedAtTicks, now.UtcTicks);
-        Volatile.Write(ref _backoffUntilTicks, now.Add(ShopperAccessTokens.JwksFailureCooldown).UtcTicks);
+        var ended = Volatile.Read(ref _lastAttemptEnded);
+        return ended == 0 ? TimeSpan.MaxValue : TimeSpan.FromMilliseconds(Environment.TickCount64 - ended);
     }
+
+    private static IEnumerable<SecurityKey> Matches(IReadOnlyList<SecurityKey> keys, string? kid) =>
+        string.IsNullOrEmpty(kid)
+            ? keys
+            : keys.Where(key => string.Equals(key.KeyId, kid, StringComparison.Ordinal));
+
+    private static Uri? ReadAddress(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        var url = configuration[$"{EShopIdentityClientOptions.SectionName}:Url"];
+        return !string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var identity)
+            ? new Uri(identity, ShopperAccessTokens.JwksPath)
+            : null;
+    }
+}
+
+/// <summary>
+/// Fetches the shopper signing keys in the background when the host starts.
+/// </summary>
+internal sealed class ShopperJwksWarmup(ShopperJwksCache cache) : IHostedService
+{
+    /// <inheritdoc />
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        cache.Warm();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>

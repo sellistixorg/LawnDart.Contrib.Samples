@@ -49,20 +49,31 @@ public static class ShopperAccessTokens
     public const string OpenIdConfigurationPath = "/.well-known/openid-configuration";
 
     /// <summary>
-    /// How long a failed key fetch waits before another try.
-    /// </summary>
-    public static readonly TimeSpan JwksFailureCooldown = TimeSpan.FromSeconds(30);
-
-    /// <summary>
-    /// Minimum time between JWKS fetches. A fetch starts this wait whether it succeeded or failed.
+    /// Age after which cached keys are refreshed in the background. Requests keep using the cached keys meanwhile.
     /// Tests may set a shorter value and should put the previous value back.
     /// </summary>
     public static TimeSpan JwksRefreshInterval { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// How long one key fetch may wait. A down Identity host does not hold every request longer than this.
+    /// Minimum time between fetches caused by a token whose key id is not cached.
+    /// Tests may set a different value and should put the previous value back.
     /// </summary>
-    public static readonly TimeSpan JwksFetchTimeout = TimeSpan.FromSeconds(2);
+    public static TimeSpan JwksUnknownKeyCooldown { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// How long one key fetch attempt may wait.
+    /// </summary>
+    public static readonly TimeSpan JwksFetchTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Attempts in one key refresh before it gives up.
+    /// </summary>
+    public const int JwksFetchAttempts = 3;
+
+    /// <summary>
+    /// Delay before the second attempt. Each later attempt waits this long times its attempt number.
+    /// </summary>
+    public static readonly TimeSpan JwksRetryDelay = TimeSpan.FromMilliseconds(500);
 
     /// <summary>
     /// How long a new token stays valid.
