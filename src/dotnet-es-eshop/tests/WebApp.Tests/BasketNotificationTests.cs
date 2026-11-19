@@ -268,6 +268,101 @@ public class BasketNotificationTests : IClassFixture<StorefrontApplication>
         Assert.True(context.Posts > 0);
     }
 
+    [Fact(Timeout = 30000)]
+    public async Task Wait_until_empty_polls_then_notifies()
+    {
+        await using var harness = BasketHarness.Start();
+        harness.Stub.Seed(
+            IdentityStub.AliceId,
+            CatalogApiStub.ItemId,
+            CatalogApiStub.ItemName,
+            CatalogApiStub.ItemPrice,
+            3,
+            CatalogApiStub.PictureUrl);
+
+        var calls = 0;
+        var emptyOnNotify = false;
+        harness.Basket.NotifyOnChange(async () =>
+        {
+            calls++;
+            var items = await harness.Basket.GetBasketItemsAsync();
+            emptyOnNotify = items.Count == 0;
+        });
+
+        var waiting = harness.Basket.WaitUntilEmptyAsync();
+        await Task.Delay(150);
+        Assert.False(waiting.IsCompleted);
+
+        harness.Stub.Seed(
+            IdentityStub.AliceId,
+            CatalogApiStub.ItemId,
+            CatalogApiStub.ItemName,
+            CatalogApiStub.ItemPrice,
+            0,
+            CatalogApiStub.PictureUrl);
+        await waiting;
+
+        Assert.True(emptyOnNotify);
+        Assert.True(calls >= 1);
+        Assert.Empty(await harness.Basket.GetBasketItemsAsync());
+    }
+
+    [Fact(Timeout = 30000)]
+    public async Task Wait_until_empty_when_already_empty_notifies()
+    {
+        await using var harness = BasketHarness.Start();
+        var calls = 0;
+        harness.Basket.NotifyOnChange(() =>
+        {
+            calls++;
+            return Task.CompletedTask;
+        });
+
+        await harness.Basket.WaitUntilEmptyAsync();
+
+        Assert.Equal(1, calls);
+        Assert.Empty(await harness.Basket.GetBasketItemsAsync());
+    }
+
+    [Fact(Timeout = 30000)]
+    public async Task Place_order_waits_for_a_delayed_bag_clear_then_refreshes_the_header()
+    {
+        _app.Identity.Reset();
+        _app.Basket.Reset();
+        _app.Ordering.Reset();
+        _app.Basket.Seed(
+            IdentityStub.AliceId,
+            CatalogApiStub.ItemId,
+            CatalogApiStub.ItemName,
+            CatalogApiStub.ItemPrice,
+            3,
+            CatalogApiStub.PictureUrl);
+        _app.Ordering.ClearBasketDelay = TimeSpan.FromMilliseconds(250);
+
+        using var client = SignedInClient();
+        await SignInAsync(client);
+
+        var page = await client.GetAsync("/checkout");
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Equal("Shopping bag, 3 items", SettledBagLabel(html));
+
+        var fields = FieldsInForm(html, "Info.RequestId");
+        fields["Info.Street"] = "123 Main";
+        fields["Info.City"] = "Seattle";
+        fields["Info.State"] = "WA";
+        fields["Info.Country"] = "USA";
+        fields["Info.ZipCode"] = "98101";
+        var posted = await PostFieldsAsync(client, "/checkout", fields);
+        var body = await ReadLandedHtmlAsync(client, posted);
+
+        Assert.True(posted.IsSuccessStatusCode || posted.StatusCode == HttpStatusCode.Redirect, Snip(body));
+        Assert.DoesNotContain("not associated with the Dispatcher", body, StringComparison.Ordinal);
+        Assert.Equal(0, _app.Basket.QuantityOf(IdentityStub.AliceId, CatalogApiStub.ItemId));
+        Assert.Equal("Shopping bag", SettledBagLabel(body));
+        Assert.Contains("/user/orders", LandedPath(posted), StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Basket_client_is_scoped_to_one_shopper()
     {
@@ -372,6 +467,27 @@ public class BasketNotificationTests : IClassFixture<StorefrontApplication>
 
         var value = match.Groups[1].Value;
         return value.Substring(1, value.Length - 2);
+    }
+
+    private static async Task<string> ReadLandedHtmlAsync(HttpClient client, HttpResponseMessage posted)
+    {
+        if (posted.StatusCode == HttpStatusCode.Redirect || posted.StatusCode == HttpStatusCode.MovedPermanently)
+        {
+            var location = posted.Headers.Location;
+            Assert.NotNull(location);
+            var landed = await client.GetAsync(location);
+            return await landed.Content.ReadAsStringAsync();
+        }
+
+        return await posted.Content.ReadAsStringAsync();
+    }
+
+    private static string LandedPath(HttpResponseMessage posted)
+    {
+        if (posted.Headers.Location is { } location)
+            return location.ToString();
+
+        return posted.RequestMessage?.RequestUri?.PathAndQuery ?? "";
     }
 
     private static string? SettledBagLabel(string html)

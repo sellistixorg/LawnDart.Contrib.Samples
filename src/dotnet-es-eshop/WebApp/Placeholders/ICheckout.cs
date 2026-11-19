@@ -30,7 +30,8 @@ public interface ICheckout
     /// <param name="cancellationToken">Token used to cancel the post.</param>
     /// <remarks>
     /// POST /api/ordering/place-order. Buyer id is the shopper account id from the authentication cookie.
-    /// The basket is not cleared here.
+    /// The basket is not cleared here. After the order is accepted, this waits
+    /// until Basket has emptied the bag, then refreshes the header count.
     /// </remarks>
     Task PlaceOrderAsync(BasketCheckoutInfo info, CancellationToken cancellationToken = default);
 }

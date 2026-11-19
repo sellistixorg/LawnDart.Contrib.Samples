@@ -60,7 +60,9 @@ public sealed class CheckoutClient(
     /// The page sets that id once, when checkout loads. An empty id here is only a safety net.
     /// The buyer user name is the account <c>UserName</c> from Shopper Account Profile, read at submit.
     /// The card payload is the card type, the cardholder name, the expiry, and the last four digits.
-    /// This method does not clear the basket.
+    /// This method does not clear the basket. After the order is accepted, it
+    /// waits until Basket has emptied the bag, then refreshes listeners so the
+    /// header count is current before checkout leaves this page.
     /// A domain rejection throws <see cref="OrderingCommandRejectedException"/> with shopper-facing text.
     /// A basket read that fails throws that same exception with "Basket is temporarily unavailable."
     /// A concurrency conflict uses a fixed retry message and does not show the response body.
@@ -109,6 +111,8 @@ public sealed class CheckoutClient(
                 }).ToArray()
             },
             cancellationToken).ConfigureAwait(false);
+
+        await basket.WaitUntilEmptyAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyCollection<BasketItem>> ReadBasketAsync(CancellationToken cancellationToken)

@@ -1,5 +1,6 @@
 ﻿@attribute [StreamRendering]
 @using System.Text.Json
+@using Microsoft.AspNetCore.WebUtilities
 @inject IBasketContents Basket
 @inject NavigationManager Nav
 @inject IHttpContextAccessor Http
@@ -40,6 +41,19 @@ else
         basketStateSubscription = Basket.NotifyOnChange(RefreshAsync);
 
         await UpdateBasketItemsAsync();
+        if (JustPlacedOrder() && (TotalQuantity ?? 0) > 0)
+        {
+            await Basket.WaitUntilEmptyAsync(_lifetime.Token);
+            await UpdateBasketItemsAsync();
+        }
+    }
+
+    private bool JustPlacedOrder()
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        return QueryHelpers.ParseQuery(uri.Query).TryGetValue("placed", out var values)
+            && Guid.TryParse(values.ToString(), out var id)
+            && id != Guid.Empty;
     }
 
     private Task RefreshAsync() =>

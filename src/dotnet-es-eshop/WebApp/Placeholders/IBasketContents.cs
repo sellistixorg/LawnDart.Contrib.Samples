@@ -61,6 +61,19 @@ public interface IBasketContents
     IDisposable NotifyOnChange(Func<Task> callback);
 
     /// <summary>
+    /// Waits until the bag is empty, then refreshes listeners.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the wait.</param>
+    /// <remarks>
+    /// Basket clears the bag after Ordering emits Order Started. Checkout calls this
+    /// after Place Order is accepted so the header count is current before the
+    /// orders page loads. The wait stops after the same retry window used for
+    /// add and quantity changes. Listeners still refresh when the bag is not yet
+    /// empty at the end of that window.
+    /// </remarks>
+    Task WaitUntilEmptyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Runs <paramref name="callback"/> after a bag write on this shopper's client.
     /// </summary>
     /// <param name="callback">Callback that reloads the bag.</param>
