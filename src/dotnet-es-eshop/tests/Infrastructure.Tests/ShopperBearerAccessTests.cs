@@ -34,6 +34,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace LawnDart.Samples.EShop.Infrastructure.Tests;
 
+[Collection(ShopperJwksSettings.Collection)]
 public class ShopperBearerAccessTests
 {
     private const string Password = "Pass123$";
@@ -358,8 +359,8 @@ public class ShopperBearerAccessTests
         });
         await using var basket = await ShopperHost.StartBasketFromIdentityAsync(identity.Address);
         var alice = Guid.NewGuid();
-        var previous = ShopperAccessTokens.JwksRefreshInterval;
-        ShopperAccessTokens.JwksRefreshInterval = TimeSpan.Zero;
+        var previous = ShopperAccessTokens.JwksUnknownKeyCooldown;
+        ShopperAccessTokens.JwksUnknownKeyCooldown = TimeSpan.Zero;
         try
         {
             using var known = await basket.PostAsync("/api/basket/add-item-to-basket", AddItem(alice), ShopperAccessTokens.Issue(first, alice, "Alice").Value);
@@ -372,12 +373,12 @@ public class ShopperBearerAccessTests
         }
         finally
         {
-            ShopperAccessTokens.JwksRefreshInterval = previous;
+            ShopperAccessTokens.JwksUnknownKeyCooldown = previous;
         }
     }
 
     [Fact]
-    public async Task Unknown_kids_share_one_refresh_inside_the_interval()
+    public async Task Unknown_kids_share_one_refresh_inside_the_cooldown()
     {
         var key = ShopperAccessTokens.CreateKey();
         var fetches = 0;
@@ -388,8 +389,8 @@ public class ShopperBearerAccessTests
         });
         await using var basket = await ShopperHost.StartBasketFromIdentityAsync(identity.Address);
         var alice = Guid.NewGuid();
-        var previous = ShopperAccessTokens.JwksRefreshInterval;
-        ShopperAccessTokens.JwksRefreshInterval = TimeSpan.FromMinutes(5);
+        var previous = ShopperAccessTokens.JwksUnknownKeyCooldown;
+        ShopperAccessTokens.JwksUnknownKeyCooldown = TimeSpan.FromMinutes(5);
         try
         {
             using var known = await basket.PostAsync(
@@ -410,6 +411,42 @@ public class ShopperBearerAccessTests
             }
 
             Assert.InRange(Volatile.Read(ref fetches) - afterKnown, 0, 1);
+        }
+        finally
+        {
+            ShopperAccessTokens.JwksUnknownKeyCooldown = previous;
+        }
+    }
+
+    [Fact]
+    public async Task Requests_without_a_token_do_not_fetch_keys()
+    {
+        var key = ShopperAccessTokens.CreateKey();
+        var fetches = 0;
+        await using var identity = await ShopperHost.StartJwksAsync(() =>
+        {
+            Interlocked.Increment(ref fetches);
+            return ShopperAccessTokens.WritePublicJwks(key);
+        });
+        await using var basket = await ShopperHost.StartBasketFromIdentityAsync(identity.Address);
+        var alice = Guid.NewGuid();
+        using var known = await basket.PostAsync(
+            "/api/basket/add-item-to-basket",
+            AddItem(alice),
+            ShopperAccessTokens.Issue(key, alice, "Alice").Value);
+        Assert.Equal(HttpStatusCode.Accepted, known.StatusCode);
+        var previous = ShopperAccessTokens.JwksRefreshInterval;
+        ShopperAccessTokens.JwksRefreshInterval = TimeSpan.Zero;
+        try
+        {
+            var before = Volatile.Read(ref fetches);
+            for (var i = 0; i < 5; i++)
+            {
+                using var anonymous = await basket.PostAsync("/api/basket/add-item-to-basket", AddItem(alice), token: null);
+                Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+            }
+
+            Assert.Equal(before, Volatile.Read(ref fetches));
         }
         finally
         {
